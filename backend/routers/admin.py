@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import Response
 import secrets
 import csv
@@ -17,10 +17,24 @@ def get_all_requests(
     current_admin: dict = Depends(get_current_admin),
     db = Depends(get_db)
 ):
-    """Retrieves all pending and processed access requests for admin review."""
+    """Retrieves all pending and processed access requests for admin review with company employee status."""
     logger.info(f"Admin '{current_admin['email']}' viewing all whitelist access requests.")
     cursor = db.cursor()
-    cursor.execute("SELECT id, email, status, secure_code, created_at FROM allowed_users ORDER BY id DESC")
+    # Left join to check if the user belongs to company_employees active roster
+    cursor.execute("""
+        SELECT 
+            au.id, 
+            au.email, 
+            au.status, 
+            au.secure_code, 
+            au.created_at,
+            ce.full_name AS company_employee_name,
+            ce.department AS company_department,
+            CASE WHEN ce.id IS NOT NULL THEN 1 ELSE 0 END AS is_company_employee
+        FROM allowed_users au
+        LEFT JOIN company_employees ce ON LOWER(au.email) = LOWER(ce.email)
+        ORDER BY au.id DESC
+    """)
     rows = cursor.fetchall()
     results = []
     for row in rows:
@@ -95,6 +109,144 @@ def approve_or_reject_user(
     
     db.commit()
     return {"message": f"User {action.email} status updated to {status_val} and notified via email.", "secure_code": secure_code}
+
+
+@router.post("/employees/import")
+async def import_company_employees(
+    file: UploadFile = File(...),
+    current_admin: dict = Depends(get_current_admin),
+    db = Depends(get_db)
+):
+    """
+    Imports active company employees roster from a CSV or TXT file.
+    Accepts CSV format with columns: email, name/full_name (optional), department (optional)
+    or simple text file with one email per line.
+    """
+    logger.info(f"Admin '{current_admin['email']}' importing company active users file '{file.filename}'")
+    filename = (file.filename or "").lower()
+    if not (filename.endswith('.csv') or filename.endswith('.txt')):
+        raise HTTPException(status_code=400, detail="Only CSV or TXT files are accepted for employee roster import.")
+
+    content_bytes = await file.read()
+    if len(content_bytes) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large. Maximum roster size is 5MB.")
+
+    try:
+        text = content_bytes.decode('utf-8', errors='replace')
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to decode file text: {str(e)}")
+
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if not lines:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+    cursor = db.cursor()
+    imported_count = 0
+    updated_count = 0
+
+    if filename.endswith('.csv'):
+        reader = csv.reader(lines)
+        first_row = next(reader, None)
+        if not first_row:
+            raise HTTPException(status_code=400, detail="CSV file contains no data.")
+
+        # Check if first row is a header
+        header_lower = [col.strip().lower() for col in first_row]
+        email_col = 0
+        name_col = -1
+        dept_col = -1
+
+        if "email" in header_lower:
+            email_col = header_lower.index("email")
+            if "name" in header_lower:
+                name_col = header_lower.index("name")
+            elif "full_name" in header_lower:
+                name_col = header_lower.index("full_name")
+            if "department" in header_lower:
+                dept_col = header_lower.index("department")
+            rows_to_process = list(reader)
+        else:
+            # First row is data
+            rows_to_process = [first_row] + list(reader)
+
+        for row in rows_to_process:
+            if not row or len(row) <= email_col:
+                continue
+            email_val = row[email_col].strip().lower()
+            if not email_val or "@" not in email_val:
+                continue
+
+            name_val = row[name_col].strip() if name_col != -1 and len(row) > name_col else ""
+            dept_val = row[dept_col].strip() if dept_col != -1 and len(row) > dept_col else "General"
+
+            cursor.execute("SELECT id FROM company_employees WHERE LOWER(email) = ?", (email_val,))
+            existing = cursor.fetchone()
+            if existing:
+                cursor.execute("""
+                    UPDATE company_employees 
+                    SET full_name = COALESCE(NULLIF(?, ''), full_name),
+                        department = COALESCE(NULLIF(?, ''), department)
+                    WHERE id = ?
+                """, (name_val, dept_val, existing["id"]))
+                updated_count += 1
+            else:
+                cursor.execute("""
+                    INSERT INTO company_employees (email, full_name, department)
+                    VALUES (?, ?, ?)
+                """, (email_val, name_val, dept_val))
+                imported_count += 1
+    else:
+        # Plain text: one email per line
+        for line in lines:
+            parts = [p.strip() for p in line.split(",") if p.strip()]
+            email_val = parts[0].lower() if parts else ""
+            if not email_val or "@" not in email_val:
+                continue
+            name_val = parts[1] if len(parts) > 1 else ""
+            dept_val = parts[2] if len(parts) > 2 else "General"
+
+            cursor.execute("SELECT id FROM company_employees WHERE LOWER(email) = ?", (email_val,))
+            existing = cursor.fetchone()
+            if existing:
+                updated_count += 1
+            else:
+                cursor.execute("""
+                    INSERT INTO company_employees (email, full_name, department)
+                    VALUES (?, ?, ?)
+                """, (email_val, name_val, dept_val))
+                imported_count += 1
+
+    db.commit()
+    logger.info(f"Imported {imported_count} new employees, updated {updated_count} existing records.")
+    return {
+        "message": f"Successfully processed company roster: {imported_count} imported, {updated_count} updated.",
+        "imported": imported_count,
+        "updated": updated_count
+    }
+
+
+@router.get("/employees")
+def get_company_employees(
+    current_admin: dict = Depends(get_current_admin),
+    db = Depends(get_db)
+):
+    """Retrieves list of all pre-registered company employees."""
+    cursor = db.cursor()
+    cursor.execute("SELECT id, email, full_name, department, imported_at FROM company_employees ORDER BY id DESC")
+    return [dict(row) for row in cursor.fetchall()]
+
+
+@router.delete("/employees/{email}")
+def remove_company_employee(
+    email: str,
+    current_admin: dict = Depends(get_current_admin),
+    db = Depends(get_db)
+):
+    """Removes an employee from the company active roster."""
+    cursor = db.cursor()
+    cursor.execute("DELETE FROM company_employees WHERE LOWER(email) = LOWER(?)", (email,))
+    db.commit()
+    return {"message": f"Employee {email} removed from company roster."}
 
 
 @router.get("/users")

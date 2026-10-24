@@ -215,6 +215,17 @@ def init_db(override_conn=None):
         );
     """)
 
+    # 8. Company Active Roster (Pre-approved / Known Company Employees)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS company_employees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            full_name TEXT,
+            department TEXT,
+            imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
     # Database Performance Indexes
     indexes = [
         "CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);",
@@ -222,7 +233,8 @@ def init_db(override_conn=None):
         "CREATE INDEX IF NOT EXISTS idx_documents_owner ON documents (owner_email);",
         "CREATE INDEX IF NOT EXISTS idx_doc_access_user ON document_access (document_id, user_email);",
         "CREATE INDEX IF NOT EXISTS idx_doc_requests_lookup ON document_requests (document_id, user_email);",
-        "CREATE INDEX IF NOT EXISTS idx_doc_logs_lookup ON document_logs (document_id, user_email);"
+        "CREATE INDEX IF NOT EXISTS idx_doc_logs_lookup ON document_logs (document_id, user_email);",
+        "CREATE INDEX IF NOT EXISTS idx_company_emp_email ON company_employees (email);"
     ]
     for idx_sql in indexes:
         try:

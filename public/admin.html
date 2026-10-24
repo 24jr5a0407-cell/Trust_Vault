@@ -32,15 +32,34 @@
             <div style="margin-bottom: 15px;">
                 <h3 style="margin-bottom: 6px;">👤 User Account Whitelist (Login Access Requests)</h3>
                 <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">
-                    Requests from new users asking for permission to create an account and log in. Approving generates a Secure Registration Code (<code>TV-XXXXXX</code>) and automatically sends it to their email.
+                    Requests from new users asking for permission to create an account and log in. The system matches requests against your company's active roster so you can immediately see if the requester is verified company personnel before approving or revoking access.
                 </p>
             </div>
+
+            <!-- COMPANY ACTIVE ROSTER IMPORT TOOLBAR -->
+            <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <strong style="color: #1e293b; font-size: 0.95rem;">🏢 Import Active Company Roster</strong>
+                        <p style="color: var(--text-muted); font-size: 0.82rem; margin: 2px 0 0 0;">
+                            Upload a <code>.csv</code> or <code>.txt</code> file with authorized company employee emails (e.g. <code>email,name,department</code> or one email per line).
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <input type="file" id="companyRosterFile" accept=".csv,.txt" style="font-size: 0.85rem; padding: 6px 10px; max-width: 250px; background: white;">
+                        <button onclick="uploadCompanyRoster()" style="padding: 7px 14px; font-size: 0.85rem; width: auto !important; background-color: #0d9488;">📤 Import Roster</button>
+                        <button onclick="toggleCompanyRosterModal()" class="btn-secondary" style="padding: 7px 12px; font-size: 0.85rem; width: auto !important;">📋 View Roster (<span id="companyRosterCount">0</span>)</button>
+                    </div>
+                </div>
+            </div>
+
             <div class="table-responsive">
                 <table>
                     <thead>
                         <tr>
                             <th>ID</th>
                             <th>Email</th>
+                            <th>Company Status</th>
                             <th>Status</th>
                             <th>Secure Code Status</th>
                             <th>Requested At</th>
@@ -48,7 +67,7 @@
                         </tr>
                     </thead>
                     <tbody id="requestsTableBody">
-                        <tr><td colspan="6" style="text-align: center;">Loading requests...</td></tr>
+                        <tr><td colspan="7" style="text-align: center;">Loading requests...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -155,6 +174,34 @@
                     </thead>
                     <tbody id="incomingRequestsBody">
                         <tr><td colspan="6" style="text-align: center;">Loading requests...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- COMPANY ACTIVE ROSTER MODAL -->
+    <div id="companyRosterModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; padding: 16px;">
+        <div style="background: white; width: 100%; max-width: 700px; max-height: 85vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                <h3 style="margin: 0; font-size: 1.15rem; color: #1e293b;">🏢 Imported Company Employees Roster</h3>
+                <button onclick="toggleCompanyRosterModal()" class="btn-secondary" style="padding: 4px 10px; font-size: 0.85rem; width: auto !important;">✕ Close</button>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0;">
+                These are verified company employees. When an access request arrives from any of these email addresses, Trust Vault highlights them with a verified company badge.
+            </p>
+            <div class="table-responsive" style="flex: 1; overflow-y: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Name</th>
+                            <th>Department</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="companyRosterTableBody">
+                        <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No company employees imported yet.</td></tr>
                     </tbody>
                 </table>
             </div>
