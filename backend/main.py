@@ -73,9 +73,6 @@ def root():
     public_index = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "public", "index.html"))
     if os.path.exists(public_index):
         return FileResponse(public_index)
-    frontend_index = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "index.html"))
-    if os.path.exists(frontend_index):
-        return FileResponse(frontend_index)
     return {
         "status": "online",
         "service": "Trust Vault Enterprise API",
