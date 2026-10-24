@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pydantic
+email-validator
+bcrypt
+python-multipart
+boto3
+libsql-client
+aiohttp
+pyjwt
+python-dotenv
+pytest
+httpx

@@ -1,0 +1,47 @@
+# Environments and Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+tv/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing and Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local databases and uploads
+*.db
+*.sqlite3
+backend/uploaded_docs/
+uploaded_docs/
+
+# IDE and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

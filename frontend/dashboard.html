@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trust Vault - User Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+</head>
+<body onload="checkAuthAndLoadDashboard()">
+    <div class="container" style="max-width: 1100px;">
+        <div class="nav-bar">
+            <div>
+                <h1>📁 Trust Vault Dashboard</h1>
+                <p id="userWelcome" style="color: var(--text-muted);"></p>
+            </div>
+            <div class="flex-row">
+                <button id="adminNavBtn" style="display: none; background-color: #0d9488;" onclick="window.location.href='admin.html'">Admin Panel</button>
+                <button class="danger" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <div id="alertBox"></div>
+
+       <!-- TAB NAVIGATION -->
+        <div style="display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid var(--border-color); padding-bottom: 12px;">
+            <button onclick="switchDashboardTab('vault')" id="tabVault" style="background: var(--primary);">My Vault</button>
+            <button onclick="switchDashboardTab('catalog')" id="tabCatalog" class="btn-secondary">Document Catalog & Requests</button>
+            <button onclick="switchDashboardTab('incoming')" id="tabIncoming" class="btn-secondary">Incoming Requests For My Docs</button>
+            <button onclick="switchDashboardTab('personal')" id="tabPersonal" class="btn-secondary">Personal Vault</button>
+        </div>
+
+        <!-- TAB 1: MY VAULT (Upload & Managed Docs) -->
+        <div id="sectionVault" class="dashboard-section">
+            <div class="card">
+                <h3>Upload New Document</h3>
+                <div class="flex-row">
+                    <input type="file" id="uploadFile" accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv,.jpg,.jpeg,.png,.webp" style="background: white;">
+                    <button onclick="uploadDocument()">Upload File</button>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">Allowed formats: PDF, DOCX, XLSX, PPTX, TXT, CSV, JPG, PNG, WEBP (Max 25MB). Executables and scripts are blocked.</p>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                <h3 style="margin: 0;">Your Accessible Documents</h3>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="text" id="vaultSearchInput" placeholder="🔍 Search by ID, filename, or owner (e.g. alice, report)..." oninput="filterVaultDocuments()" style="padding: 8px 12px; width: 340px; font-size: 0.9rem;">
+                    <button onclick="clearVaultSearch()" class="btn-secondary" style="padding: 8px 12px; font-size: 0.85rem;">Clear</button>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Filename</th>
+                        <th>Owner</th>
+                        <th>Uploaded Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="documentTableBody">
+                    <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Loading documents...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- TAB 2: DOCUMENT CATALOG & MY REQUESTS -->
+        <div id="sectionCatalog" class="dashboard-section" style="display: none;">
+            <div class="card">
+                <h3>🔍 Document Catalog (Search & Request)</h3>
+                <div class="flex-row" style="margin-bottom: 15px; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <input type="text" id="searchInput" placeholder="🔍 Search by ID, filename, or owner (e.g. alice, report)..." oninput="handleCatalogSearchInput()" onkeydown="if(event.key==='Enter') searchCatalog()" style="max-width: 420px; font-size: 0.9rem;">
+                    <button onclick="searchCatalog()">Search</button>
+                    <button onclick="clearCatalogSearch()" class="btn-secondary">Reset</button>
+                    <span id="catalogCountBadge" style="font-size: 0.85rem; color: var(--text-muted); margin-left: auto;"></span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Filename</th>
+                            <th>Owner</th>
+                            <th>Access Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="catalogTableBody">
+                        <tr><td colspan="5" style="text-align: center;">Loading catalog...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h3>📌 My Request Status Panel</h3>
+                <div class="flex-row" style="margin-bottom: 15px; gap: 15px;">
+                    <select id="requestStatusFilter" style="max-width: 200px;" onchange="loadMyRequests()">
+                        <option value="ALL">All Statuses</option>
+                        <option value="PENDING">PENDING</option>
+                        <option value="APPROVED">APPROVED</option>
+                        <option value="REJECTED">REJECTED</option>
+                        <option value="REVOKED">REVOKED</option>
+                    </select>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Req ID</th>
+                            <th>Document</th>
+                            <th>Owner</th>
+                            <th>Status</th>
+                            <th>Requested At</th>
+                        </tr>
+                    </thead>
+                    <tbody id="myRequestsTableBody">
+                        <tr><td colspan="5" style="text-align: center;">Loading your requests...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 3: INCOMING REQUESTS (For Document Owners) -->
+        <div id="sectionIncoming" class="dashboard-section" style="display: none;">
+            <div class="card">
+                <h3>📥 Access Requests For Documents You Own</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">Approve, reject, or revoke access requests submitted by other users for your files.</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Req ID</th>
+                            <th>Document</th>
+                            <th>Requester Email</th>
+                            <th>Status</th>
+                            <th>Requested At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dashboardIncomingBody">
+                        <tr><td colspan="6" style="text-align: center;">Loading incoming requests...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 4: PERSONAL VAULT -->
+        <div id="sectionPersonal" class="dashboard-section" style="display: none;">
+            <div class="card">
+                <h3>🔒 Private Personal Vault</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">Upload your personal files here. They are completely private—no other user or admin can see them. Deletions require no admin approval and are logged securely by document ID.</p>
+                <div class="flex-row">
+                    <input type="file" id="uploadPersonalFile" accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv,.jpg,.jpeg,.png,.webp" style="background: white;">
+                    <button onclick="uploadPersonalDocument()" style="background: #0d9488;">Upload Personal Doc</button>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">Allowed formats: PDF, DOCX, XLSX, PPTX, TXT, CSV, JPG, PNG, WEBP (Max 25MB). Private and encrypted.</p>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+
+                <h3 style="margin: 0;">Your Private Documents</h3>
+
+                <div style="display: flex; gap: 8px; align-items: center;">
+
+                    <input type="text" id="personalSearchInput" placeholder="🔍 Search personal files by ID or name..." oninput="filterPersonalDocuments()" style="padding: 8px 12px; width: 300px; font-size: 0.9rem;">
+
+                    <button onclick="clearPersonalSearch()" class="btn-secondary" style="padding: 8px 12px; font-size: 0.85rem;">Clear</button>
+
+                </div>
+
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Filename</th>
+                        <th>Uploaded Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="personalTableBody">
+                    <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Loading personal vault...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <!-- DOCUMENT PREVIEW MODAL -->
+    <div id="previewModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: white; width: 80%; height: 80%; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 id="previewTitle">Document Preview (Read-Only)</h3>
+                <button onclick="closePreview()" class="danger" style="padding: 5px 10px;">Close</button>
+            </div>
+
+            <div id="pdfViewerContainer" style="flex: 1; overflow-y: auto; background: #525659; border-radius: 6px; padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 15px; user-select: none;" oncontextmenu="return false;">
+                <p style="color: white; margin-top: 50px;">Loading secure document...</p>
+            </div>
+            <!-- <object id="previewObject" data="" type="application/pdf" style="flex: 1; border: 1px solid var(--border-color); border-radius: 6px; width: 100%; height: 100%;">
+                <p style="text-align: center; padding: 20px;">Unable to load document preview.</p>
+            </object> -->
+            <!-- <iframe id="previewFrame" style="flex: 1; border: 1px solid var(--border-color); border-radius: 6px;"></iframe> -->
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
