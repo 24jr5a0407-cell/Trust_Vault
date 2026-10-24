@@ -136,9 +136,7 @@ async function handleSendLoginOtp() {
         showAlert(data.message, 'success');
         document.getElementById('loginOtpRequestSection').style.display = 'none';
         document.getElementById('loginOtpInputSection').style.display = 'block';
-        if (data.otp_code) {
-            document.getElementById('loginOtp').value = data.otp_code;
-        }
+        document.getElementById('loginOtp').value = '';
         document.getElementById('loginOtp').focus();
     } catch (err) {
         showAlert(err.message, 'error');
@@ -247,9 +245,7 @@ async function handleSendForgotOtp() {
         showAlert(data.message, 'success');
         document.getElementById('forgotStep1').style.display = 'none';
         document.getElementById('forgotStep2').style.display = 'block';
-        if (data.otp_code) {
-            document.getElementById('resetOtp').value = data.otp_code;
-        }
+        document.getElementById('resetOtp').value = '';
         document.getElementById('resetOtp').focus();
     } catch (err) {
         showAlert(err.message, 'error');
