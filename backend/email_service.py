@@ -49,7 +49,7 @@ def send_email(to_email: str, subject: str, html_content: str, text_content: str
                 data = res.json()
                 success = True
                 delivery_note = f"Dispatched via Resend API (ID: {data.get('id')})"
-                logger.info(f"🚀 Email delivered to {to_email} via Resend API (ID: {data.get('id')})")
+                logger.info(f"Email delivered to {to_email} via Resend API (ID: {data.get('id')})")
             else:
                 logger.warning(f"Resend API returned status {res.status_code}: {res.text}. Trying SMTP...")
         except Exception as resend_err:
@@ -98,5 +98,5 @@ def send_email(to_email: str, subject: str, html_content: str, text_content: str
         "success": success
     }
     EMAIL_DELIVERY_LOGS.append(record)
-    logger.info(f"📧 Notification Recorded for {to_email} | Subject: '{subject}' | Method: {delivery_note}")
+    logger.info(f"Notification Recorded for {to_email} | Subject: '{subject}' | Method: {delivery_note}")
     return record
