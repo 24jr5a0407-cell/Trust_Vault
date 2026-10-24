@@ -1,4 +1,5 @@
 import pytest
+from config import ADMIN_EMAIL, ADMIN_DEFAULT_PASSWORD
 
 def test_root_endpoint(client):
     response = client.get("/")
@@ -10,10 +11,27 @@ def test_health_check_endpoint(client):
     assert response.status_code == 200
     assert response.json()["status"] == "healthy"
 
-def test_admin_login_success(client):
+def test_admin_login_success(client, test_db):
+    # 1. Send Login OTP
+    otp_res = client.post("/api/send-login-otp", json={
+        "email": ADMIN_EMAIL,
+        "password": ADMIN_DEFAULT_PASSWORD
+    })
+    assert otp_res.status_code == 200
+    assert "Verification code" in otp_res.json()["message"]
+
+    # Retrieve generated OTP from test database
+    cursor = test_db.cursor()
+    cursor.execute("SELECT otp FROM otps WHERE email = ? AND purpose = 'LOGIN' ORDER BY id DESC LIMIT 1", (ADMIN_EMAIL,))
+    row = cursor.fetchone()
+    assert row is not None
+    otp_code = row["otp"]
+
+    # 2. Login with OTP
     response = client.post("/api/login", json={
-        "email": "admin@trustvault.com",
-        "password": "AdminSecurePassword123"
+        "email": ADMIN_EMAIL,
+        "password": ADMIN_DEFAULT_PASSWORD,
+        "otp": otp_code
     })
     assert response.status_code == 200
     data = response.json()
@@ -24,13 +42,14 @@ def test_admin_login_success(client):
 
 def test_login_invalid_password(client):
     response = client.post("/api/login", json={
-        "email": "admin@trustvault.com",
-        "password": "WrongPassword!"
+        "email": ADMIN_EMAIL,
+        "password": "WrongPassword!",
+        "otp": "123456"
     })
     assert response.status_code == 401
     assert "Invalid email or password" in response.json()["detail"]
 
-def test_access_request_and_registration_lifecycle(client, admin_headers):
+def test_access_request_and_registration_lifecycle(client, admin_headers, test_db):
     user_email = "newuser@example.com"
     
     # 1. Request access
@@ -58,7 +77,7 @@ def test_access_request_and_registration_lifecycle(client, admin_headers):
         "password": "UserSecurePassword123",
         "secure_code": "INVALID-CODE"
     })
-    assert fail_reg.status_code == 400
+    assert fail_reg.status_code == 403
 
     # 4. Registration with valid code succeeds
     success_reg = client.post("/api/register", json={
@@ -69,10 +88,21 @@ def test_access_request_and_registration_lifecycle(client, admin_headers):
     assert success_reg.status_code == 200
     assert "Account created successfully" in success_reg.json()["message"]
 
-    # 5. Login with newly created user
-    login_res = client.post("/api/login", json={
+    # 5. Send login OTP for new user
+    user_otp_res = client.post("/api/send-login-otp", json={
         "email": user_email,
         "password": "UserSecurePassword123"
+    })
+    assert user_otp_res.status_code == 200
+    cursor = test_db.cursor()
+    cursor.execute("SELECT otp FROM otps WHERE email = ? AND purpose = 'LOGIN' ORDER BY id DESC LIMIT 1", (user_email,))
+    user_otp = cursor.fetchone()["otp"]
+
+    # 6. Login with newly created user and OTP
+    login_res = client.post("/api/login", json={
+        "email": user_email,
+        "password": "UserSecurePassword123",
+        "otp": user_otp
     })
     assert login_res.status_code == 200
     assert login_res.json()["is_admin"] is False

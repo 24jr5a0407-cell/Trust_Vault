@@ -41,3 +41,11 @@ MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "guardfile@gmail.com")
 ADMIN_DEFAULT_PASSWORD = os.getenv("ADMIN_DEFAULT_PASSWORD", "Arshad@1234")
 ADMIN_MASTER_CODE = os.getenv("ADMIN_MASTER_CODE", "ADMIN-MASTER-KEY")
+
+# SMTP Email Configuration
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com").strip()
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "").strip()
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "").strip()
+SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", SMTP_USER).strip()
+SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "Trust Vault Security").strip()

@@ -1,4 +1,5 @@
 import pytest
+from config import ADMIN_EMAIL, ADMIN_DEFAULT_PASSWORD
 
 def test_admin_routes_forbidden_for_regular_users(client, user_headers):
     # Regular user attempting admin endpoints should receive HTTP 403 Forbidden
@@ -30,7 +31,7 @@ def test_admin_routes_allowed_for_admin(client, admin_headers):
     res_users = client.get("/api/admin/users", headers=admin_headers)
     assert res_users.status_code == 200
     users = res_users.json()
-    assert any(u["email"] == "admin@trustvault.com" for u in users)
+    assert any(u["email"] == ADMIN_EMAIL for u in users)
 
     # Admin can export ledger
     res_export = client.get("/api/admin/ledger/export", headers=admin_headers)
@@ -38,6 +39,6 @@ def test_admin_routes_allowed_for_admin(client, admin_headers):
     assert "text/csv" in res_export.headers.get("Content-Type", "")
 
 def test_cannot_delete_primary_admin(client, admin_headers):
-    res = client.delete("/api/admin/users/admin@trustvault.com", headers=admin_headers)
+    res = client.delete(f"/api/admin/users/{ADMIN_EMAIL}", headers=admin_headers)
     assert res.status_code == 400
     assert "Cannot remove primary admin" in res.json()["detail"]

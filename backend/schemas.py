@@ -15,6 +15,19 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+    otp: str = None
+
+class SendLoginOtp(BaseModel):
+    email: EmailStr
+    password: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordWithOtp(BaseModel):
+    email: EmailStr
+    otp: str
+    new_password: str
 
 class GrantAccessRequest(BaseModel):
     user_email: EmailStr

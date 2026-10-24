@@ -3,26 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trust Vault - Authentication</title>
+    <title>Trust Vault - Enterprise Authentication</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container" style="max-width: 500px;">
+    <div class="container" style="max-width: 520px;">
         <h1 style="text-align: center;">🔒 Trust Vault</h1>
-        <p style="text-align: center; color: var(--text-muted); margin-bottom: 25px;">Secure Document Protector & Audit System</p>
+        <p style="text-align: center; color: var(--text-muted); margin-bottom: 25px;">Enterprise Zero-Leak Document Vault & Audit Matrix</p>
 
         <div id="alertBox"></div>
 
         <!-- TABS -->
-        <div style="display: flex; margin-bottom: 20px; border-bottom: 2px solid var(--border-color);">
-            <button onclick="switchTab('login')" id="tabLogin" style="flex: 1; background: none; color: var(--text-main); border-bottom: 2px solid var(--primary); border-radius: 0;">Sign In</button>
+        <div class="tab-bar-scrollable" style="display: flex; margin-bottom: 20px; border-bottom: 2px solid var(--border-color);">
+            <button onclick="switchTab('login')" id="tabLogin" style="flex: 1; background: none; color: var(--text-main); border-bottom: 2px solid var(--primary); border-radius: 0;">Sign In (2FA)</button>
             <button onclick="switchTab('register')" id="tabRegister" style="flex: 1; background: none; color: var(--text-muted); border-radius: 0;">Register</button>
             <button onclick="switchTab('request')" id="tabRequest" style="flex: 1; background: none; color: var(--text-muted); border-radius: 0;">Request Access</button>
+            <button onclick="switchTab('forgot')" id="tabForgot" style="flex: 1; background: none; color: var(--text-muted); border-radius: 0;">Forgot Password</button>
         </div>
 
-        <!-- 1. LOGIN FORM -->
+        <!-- 1. LOGIN FORM WITH 2FA OTP -->
         <div id="formLogin">
             <h3>Sign In to Your Vault</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Enter your credentials, receive a 5-minute security OTP via email, and verify to enter.</p>
+            
             <div class="form-group">
                 <label>Email Address</label>
                 <input type="email" id="loginEmail" placeholder="e.g., guardfile@gmail.com">
@@ -31,36 +34,95 @@
                 <label>Password</label>
                 <input type="password" id="loginPassword" placeholder="••••••••••••">
             </div>
-            <button onclick="handleLogin()" style="width: 100%;">Sign In</button>
+
+            <!-- STEP 1: REQUEST OTP BUTTON -->
+            <div id="loginOtpRequestSection" style="margin-bottom: 15px;">
+                <button type="button" id="btnRequestLoginOtp" onclick="handleSendLoginOtp()" style="width: 100%; background: #0284c7;">
+                    📧 Send 5-Min Login OTP to My Email
+                </button>
+            </div>
+
+            <!-- STEP 2: OTP INPUT -->
+            <div id="loginOtpInputSection" style="display: none; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px dashed var(--primary); margin-bottom: 15px;">
+                <label style="color: var(--primary);">Enter 6-Digit Email OTP (Valid for 5 Min)</label>
+                <input type="text" id="loginOtp" placeholder="123456" maxlength="6" style="font-size: 1.2rem; letter-spacing: 4px; text-align: center; font-weight: bold; margin-bottom: 10px;">
+                <button type="button" onclick="handleLogin()" style="width: 100%;">Verify OTP & Complete Sign In</button>
+                <p style="font-size: 0.78rem; text-align: center; color: var(--text-muted); margin-top: 8px;">
+                    Didn't receive it? <a href="javascript:void(0)" onclick="handleSendLoginOtp()" style="color: var(--primary); text-decoration: underline;">Resend OTP</a>
+                </p>
+            </div>
+
+            <div style="text-align: right; margin-top: 10px;">
+                <a href="javascript:void(0)" onclick="switchTab('forgot')" style="font-size: 0.85rem; color: var(--primary); text-decoration: none;">Forgot your password?</a>
+            </div>
         </div>
 
         <!-- 2. REGISTER FORM -->
         <div id="formRegister" style="display: none;">
             <h3>Create Account (Approved Whitelist Only)</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Use the confidential secure code dispatched to your email after admin approval.</p>
             <div class="form-group">
                 <label>Approved Email</label>
                 <input type="email" id="regEmail" placeholder="Your approved email">
             </div>
             <div class="form-group">
-                <label>Secure Registration Code (Received via Email)</label>
-                <input type="text" id="regCode" placeholder="e.g., TV-A1B">
+                <label>Secure Registration Code</label>
+                <input type="text" id="regCode" placeholder="e.g., TV-A1B2C3">
             </div>
             <div class="form-group">
                 <label>Set Password</label>
-                <input type="password" id="regPassword" placeholder="Choose a strong password">
+                <input type="password" id="regPassword" placeholder="Choose a strong password (min 6 chars)">
             </div>
             <button onclick="handleRegister()" style="width: 100%;">Create Account</button>
         </div>
 
         <!-- 3. REQUEST ACCESS FORM -->
         <div id="formRequest" style="display: none;">
-            <h3>Request Access from Admin</h3>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">New users must submit their email for admin approval before creating an account.</p>
+            <h3>Request Whitelist Entry</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">New users must submit their email for administrator authorization. Upon approval, your registration security code will be sent to your email.</p>
             <div class="form-group">
                 <label>Your Email Address</label>
                 <input type="email" id="reqEmail" placeholder="name@company.com">
             </div>
             <button onclick="handleRequestAccess()" style="width: 100%;">Submit Request</button>
+        </div>
+
+        <!-- 4. FORGOT PASSWORD WITH 5-MIN OTP -->
+        <div id="formForgot" style="display: none;">
+            <h3>Reset Forgotten Password</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Enter your registered email to receive a 5-minute one-time verification password reset code.</p>
+
+            <div id="forgotStep1">
+                <div class="form-group">
+                    <label>Registered Email Address</label>
+                    <input type="email" id="forgotEmail" placeholder="name@example.com">
+                </div>
+                <button type="button" id="btnSendForgotOtp" onclick="handleSendForgotOtp()" style="width: 100%;">Send Password Reset OTP</button>
+            </div>
+
+            <div id="forgotStep2" style="display: none; margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <div class="form-group">
+                    <label>6-Digit Reset Code (From Email)</label>
+                    <input type="text" id="resetOtp" placeholder="123456" maxlength="6" style="font-size: 1.1rem; letter-spacing: 3px; text-align: center; font-weight: bold;">
+                </div>
+                <div class="form-group">
+                    <label>New Password (min 6 chars)</label>
+                    <input type="password" id="newPassword" placeholder="••••••••••••">
+                </div>
+                <button type="button" onclick="handleResetPassword()" style="width: 100%; background: #22c55e;">Change Password</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- GLOBAL CONFIRMATION / NOTICE MODAL -->
+    <div id="appModal" class="custom-modal-backdrop" style="display: none;">
+        <div class="custom-modal-box">
+            <h3 id="appModalTitle" style="margin-bottom: 12px;">Notice</h3>
+            <p id="appModalMessage" style="color: var(--text-muted); margin-bottom: 20px; line-height: 1.5;"></p>
+            <div id="appModalButtons" style="display: flex; gap: 10px; justify-content: center;">
+                <button id="appModalOkBtn" onclick="closeAppModal()">OK</button>
+            </div>
         </div>
     </div>
 

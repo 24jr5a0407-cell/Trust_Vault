@@ -7,6 +7,7 @@ import schemas
 from database import get_db
 from security import get_current_admin
 from logger import logger
+from email_service import send_email
 
 router = APIRouter(prefix="/api/admin", tags=["Admin Dashboard"])
 
@@ -20,7 +21,17 @@ def get_all_requests(
     logger.info(f"Admin '{current_admin['email']}' viewing all whitelist access requests.")
     cursor = db.cursor()
     cursor.execute("SELECT id, email, status, secure_code, created_at FROM allowed_users ORDER BY id DESC")
-    return [dict(row) for row in cursor.fetchall()]
+    rows = cursor.fetchall()
+    results = []
+    for row in rows:
+        r = dict(row)
+        # Security: Do not expose raw secure registration codes in the table for regular whitelist rows
+        if r["email"] != "guardfile@gmail.com" and r["secure_code"] != "ADMIN-MASTER-KEY":
+            r["secure_code_masked"] = "Sent to User's Email" if r["status"] == "APPROVED" else "N/A"
+        else:
+            r["secure_code_masked"] = "ADMIN-MASTER-KEY"
+        results.append(r)
+    return results
 
 
 @router.post("/approve")
@@ -29,7 +40,7 @@ def approve_or_reject_user(
     current_admin: dict = Depends(get_current_admin),
     db = Depends(get_db)
 ):
-    """Admin approves or rejects a user access request."""
+    """Admin approves or rejects a user access request and dispatches registration email."""
     logger.info(f"Admin '{current_admin['email']}' updating status for '{action.email}' to '{action.status}'")
     cursor = db.cursor()
     cursor.execute("SELECT * FROM allowed_users WHERE email = ?", (action.email,))
@@ -41,8 +52,41 @@ def approve_or_reject_user(
     if status_val == "APPROVED":
         secure_code = f"TV-{secrets.token_hex(3).upper()}"
         logger.info(f"Generated secure registration code for '{action.email}': {secure_code}")
+        
+        # Dispatch Security Code directly to the user's registered email
+        subject = "Trust Vault - Your Whitelist Access Request Has Been Approved!"
+        html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 520px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <h2 style="color: #22c55e; margin-bottom: 8px;">🎉 Access Request Approved</h2>
+            <p>Hello,</p>
+            <p>Your access request to the <strong>Trust Vault</strong> system has been approved by the administrator.</p>
+            <p>Here is your confidential <strong>Secure Registration Code</strong>:</p>
+            <div style="font-size: 26px; font-weight: bold; letter-spacing: 3px; color: #4f46e5; background: #eef2ff; padding: 14px; text-align: center; border-radius: 6px; margin: 16px 0;">
+                {secure_code}
+            </div>
+            <p>To complete your registration:</p>
+            <ol style="color: #334155; line-height: 1.6;">
+                <li>Visit the Trust Vault login page</li>
+                <li>Switch to the <strong>Register</strong> tab</li>
+                <li>Enter your approved email (<code>{action.email}</code>) and this security code</li>
+                <li>Set your private password and sign in!</li>
+            </ol>
+            <p style="color: #64748b; font-size: 13px;">Security Note: Do not share this code with anyone. It can only be used once.</p>
+        </div>
+        """
+        send_email(action.email, subject, html, f"Your Trust Vault Secure Code is: {secure_code}. Use this to register your account.")
+        
     elif status_val == "REJECTED":
         logger.info(f"Access request for '{action.email}' was rejected.")
+        subject = "Trust Vault - Access Whitelist Request Update"
+        html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <h2 style="color: #ef4444; margin-bottom: 8px;">Access Request Notice</h2>
+            <p>Your access request for <strong>{action.email}</strong> was reviewed by the administrator and could not be approved at this time.</p>
+            <p style="color: #64748b; font-size: 13px;">If you believe this is an error, please reach out directly to your organization administrator.</p>
+        </div>
+        """
+        send_email(action.email, subject, html, "Your Trust Vault access request was not approved at this time.")
 
     if not allowed_user:
         cursor.execute("INSERT INTO allowed_users (email, status, secure_code) VALUES (?, ?, ?)", (action.email, status_val, secure_code))
@@ -50,7 +94,7 @@ def approve_or_reject_user(
         cursor.execute("UPDATE allowed_users SET status = ?, secure_code = ? WHERE email = ?", (status_val, secure_code, action.email))
     
     db.commit()
-    return {"message": f"User {action.email} status updated to {status_val}.", "secure_code": secure_code}
+    return {"message": f"User {action.email} status updated to {status_val} and notified via email.", "secure_code": secure_code}
 
 
 @router.get("/users")

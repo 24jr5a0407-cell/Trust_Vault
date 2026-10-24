@@ -13,7 +13,10 @@
                 <h1>🛡️ Admin Control Panel</h1>
                 <p style="color: var(--text-muted);">Manage access whitelists, users, and audit logs.</p>
             </div>
-            <button class="btn-secondary" onclick="window.location.href='dashboard.html'">Back to Dashboard</button>
+            <div class="flex-row">
+                <button class="btn-secondary" onclick="window.location.href='dashboard.html'">Back to Dashboard</button>
+                <button class="danger" onclick="confirmLogout()">Logout</button>
+            </div>
         </div>
 
         <div id="alertBox"></div>
@@ -23,102 +26,104 @@
             <div style="margin-bottom: 15px;">
                 <h3 style="margin-bottom: 6px;">👤 User Account Whitelist (Login Access Requests)</h3>
                 <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">
-                    Requests from new users asking for permission to create an account and log in. Approving generates a Secure Registration Code (<code>TV-XXXXXX</code>).
+                    Requests from new users asking for permission to create an account and log in. Approving generates a Secure Registration Code (<code>TV-XXXXXX</code>) and automatically sends it to their email.
                 </p>
             </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Email</th>
-                        <th>Status</th>
-                        <th>Secure Code</th>
-                        <th>Requested At</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="requestsTableBody">
-                    <tr><td colspan="5" style="text-align: center;">Loading requests...</td></tr>
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>Secure Code Status</th>
+                            <th>Requested At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requestsTableBody">
+                        <tr><td colspan="6" style="text-align: center;">Loading requests...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- 2. EMPLOYEE / USER MANAGEMENT -->
         <div class="card">
             <h3>Registered Employees (Active Users)</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Email</th>
-                        <th>Is Admin</th>
-                        <th>Joined At</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="usersTableBody">
-                    <tr><td colspan="5" style="text-align: center;">Loading users...</td></tr>
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Email</th>
+                            <th>Is Admin</th>
+                            <th>Joined At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <tr><td colspan="5" style="text-align: center;">Loading users...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- 3. ALL SYSTEM DOCUMENTS -->
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-
                 <h3 style="margin: 0;">All Vault Documents</h3>
-
-                <div style="display: flex; gap: 8px; align-items: center;">
-
-                    <input type="text" id="adminDocSearchInput" placeholder="🔍 Search by ID, filename, or owner (e.g. alice, report)..." oninput="filterAdminDocs()" style="padding: 8px 12px; width: 360px; font-size: 0.9rem;">
-
-                    <button onclick="clearAdminDocSearch()" class="btn-secondary" style="padding: 8px 12px; font-size: 0.85rem;">Clear</button>
-
+                <div style="display: flex; gap: 8px; align-items: center; width: 100%; max-width: 400px;">
+                    <input type="text" id="adminDocSearchInput" placeholder="🔍 Search by ID, filename, or owner..." oninput="filterAdminDocs()" style="padding: 8px 12px; font-size: 0.9rem;">
+                    <button onclick="clearAdminDocSearch()" class="btn-secondary" style="padding: 8px 12px; font-size: 0.85rem; width: auto !important;">Clear</button>
                 </div>
-
             </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Filename</th>
-                        <th>Owner</th>
-                        <th>Created At</th>
-                    </tr>
-                </thead>
-                <tbody id="adminDocsTableBody">
-                    <tr><td colspan="4" style="text-align: center;">Loading documents...</td></tr>
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Filename</th>
+                            <th>Owner</th>
+                            <th>Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminDocsTableBody">
+                        <tr><td colspan="4" style="text-align: center;">Loading documents...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- 4. AUDIT LEDGER LOGS -->
         <div class="card">
             <h3>🔒 Complete System Audit Ledger Logs</h3>
-            <div class="flex-row" style="margin-bottom: 15px; gap: 15px;">
-                <input type="text" id="filterEmail" placeholder="Filter by user email..." style="max-width: 300px;">
-                <select id="filterAction" style="max-width: 200px;">
+            <div class="flex-row" style="margin-bottom: 15px; gap: 10px;">
+                <input type="text" id="filterEmail" placeholder="Filter by user email..." style="max-width: 250px;">
+                <select id="filterAction" style="max-width: 180px;">
                     <option value="">All Actions</option>
                     <option value="VIEWED">VIEWED</option>
                     <option value="DOWNLOADED">DOWNLOADED</option>
                 </select>
-                <button onclick="loadAdminLedger()">Apply Filters</button>
-                <button onclick="exportLedgerCsv()" style="background-color: #0d9488;">Download CSV Export</button>
+                <button onclick="loadAdminLedger()" style="width: auto !important;">Apply Filters</button>
+                <button onclick="exportLedgerCsv()" style="background-color: #0d9488; width: auto !important;">Download CSV Export</button>
             </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Log ID</th>
-                        <th>Document</th>
-                        <th>User Email</th>
-                        <th>Action</th>
-                        <th>Timestamp</th>
-                    </tr>
-                </thead>
-                <tbody id="auditTableBody">
-                    <tr><td colspan="5" style="text-align: center;">Loading audit logs...</td></tr>
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Log ID</th>
+                            <th>Document</th>
+                            <th>User Email</th>
+                            <th>Action</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditTableBody">
+                        <tr><td colspan="5" style="text-align: center;">Loading audit logs...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- 5. DOCUMENT FILE ACCESS REQUESTS (FILE PERMISSIONS) -->
@@ -129,21 +134,34 @@
                     Requests from registered users asking to view specific protected files in the catalog. Document owners and administrators can approve or reject read-only file access here.
                 </p>
             </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Req ID</th>
-                        <th>Doc ID & Filename</th>
-                        <th>Requester Email</th>
-                        <th>Owner Email</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="incomingRequestsBody">
-                    <tr><td colspan="6" style="text-align: center;">Loading requests...</td></tr>
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Req ID</th>
+                            <th>Doc ID & Filename</th>
+                            <th>Requester Email</th>
+                            <th>Owner Email</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="incomingRequestsBody">
+                        <tr><td colspan="6" style="text-align: center;">Loading requests...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- GLOBAL CONFIRMATION / NOTICE MODAL -->
+    <div id="appModal" class="custom-modal-backdrop" style="display: none;">
+        <div class="custom-modal-box">
+            <h3 id="appModalTitle" style="margin-bottom: 12px;">Notice</h3>
+            <p id="appModalMessage" style="color: var(--text-muted); margin-bottom: 20px; line-height: 1.5;"></p>
+            <div id="appModalButtons" style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <button id="appModalOkBtn" onclick="closeAppModal()">OK</button>
+            </div>
         </div>
     </div>
 

@@ -3,6 +3,7 @@ import schemas
 from database import get_db
 from security import get_current_user
 from logger import logger
+from email_service import send_email
 
 router = APIRouter(prefix="/api/requests", tags=["User Document Requests"])
 
@@ -90,6 +91,24 @@ def request_document_access(
         
     db.commit()
     logger.info(f"Request set to PENDING for '{effective_user}' on doc {document_id}")
+    
+    # Send Notification Email to Document Owner
+    try:
+        subject = f"Trust Vault - Access Requested for Document: {doc['filename']}"
+        html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <h2 style="color: #4f46e5; margin-bottom: 8px;">📄 New Document Access Request</h2>
+            <p>User <strong>{effective_user}</strong> has requested permission to access your document:</p>
+            <div style="background: #f8fafc; padding: 12px; border-left: 4px solid #4f46e5; margin: 15px 0;">
+                <p style="margin: 0; font-weight: bold;">{doc['filename']} (ID: #{doc['id']})</p>
+            </div>
+            <p>You can review and approve or reject this request anytime in your Trust Vault dashboard under <em>'Incoming Requests'</em>.</p>
+        </div>
+        """
+        send_email(doc["owner_email"], subject, html, f"User {effective_user} requested access to {doc['filename']}.")
+    except Exception as notify_err:
+        logger.warning(f"Could not send owner notification email: {notify_err}")
+
     return {"message": "Access request sent successfully to document owner and admin.", "status": "PENDING"}
 
 
@@ -189,6 +208,26 @@ def handle_request_approval(
         
     db.commit()
     logger.info(f"Request {request_id} updated to {new_status} by {effective_reviewer}")
+    
+    # Notify requesting user via email of permission grant or rejection
+    try:
+        cursor.execute("SELECT filename FROM documents WHERE id = ?", (req["document_id"],))
+        d_row = cursor.fetchone()
+        fname = d_row["filename"] if d_row else f"Document #{req['document_id']}"
+        
+        status_color = "#22c55e" if new_status == "APPROVED" else "#ef4444"
+        subject = f"Trust Vault - Document Access {new_status}: {fname}"
+        html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <h2 style="color: {status_color}; margin-bottom: 8px;">Document Access {new_status}</h2>
+            <p>Your access request for <strong>{fname}</strong> has been updated to <strong>{new_status}</strong> by {effective_reviewer}.</p>
+            {f"<p>You can now view this document in your <strong>My Vault</strong> dashboard.</p>" if new_status == "APPROVED" else "<p>You do not currently have access to view this document.</p>"}
+        </div>
+        """
+        send_email(req["user_email"], subject, html, f"Your request for {fname} was marked as {new_status}.")
+    except Exception as notify_err:
+        logger.warning(f"Could not send user permission update email: {notify_err}")
+
     return {"message": f"Request status updated to {new_status} successfully by {effective_reviewer}."}
 
 
@@ -229,4 +268,20 @@ def revoke_document_access(
     
     db.commit()
     logger.info(f"Access revoked for {target_email} on doc {document_id}")
+    
+    # Send revocation notification email
+    try:
+        fname = doc["filename"] if doc else f"Document #{document_id}"
+        subject = f"Trust Vault - Document Access Revoked: {fname}"
+        html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <h2 style="color: #ef4444; margin-bottom: 8px;">Access Revoked</h2>
+            <p>Your access permissions to <strong>{fname}</strong> have been revoked by {effective_reviewer}.</p>
+            <p style="color: #64748b; font-size: 13px;">You will need to submit a new request if you require access in the future.</p>
+        </div>
+        """
+        send_email(target_email, subject, html, f"Your access to {fname} has been revoked.")
+    except Exception as notify_err:
+        logger.warning(f"Could not send revocation email: {notify_err}")
+
     return {"message": f"Access revoked for {target_email}. User must re-request to gain access again."}

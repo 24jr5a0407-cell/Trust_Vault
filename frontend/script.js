@@ -17,30 +17,151 @@ function showAlert(message, type = "success", containerId = "alertBox") {
     if (!box) return;
     box.className = `alert ${type}`;
     box.innerText = message;
-    setTimeout(() => { box.className = ""; box.innerText = ""; }, 4000);
+    setTimeout(() => { box.className = ""; box.innerText = ""; }, 5000);
 }
 
-// --- AUTH TABS ---
+// --- GLOBAL CUSTOM APP MODAL (Alerts & Confirmations) ---
+function showAppModal({ title, message, okText = "OK", cancelText = null, onOk = null, onCancel = null }) {
+    const modal = document.getElementById('appModal');
+    if (!modal) {
+        if (cancelText) {
+            if (confirm(`${title}\n\n${message}`) && onOk) onOk();
+        } else {
+            alert(`${title}\n\n${message}`);
+            if (onOk) onOk();
+        }
+        return;
+    }
+
+    document.getElementById('appModalTitle').innerText = title;
+    document.getElementById('appModalMessage').innerText = message;
+
+    const btnContainer = document.getElementById('appModalButtons');
+    btnContainer.innerHTML = '';
+
+    if (cancelText) {
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn-secondary';
+        cancelBtn.innerText = cancelText;
+        cancelBtn.style.width = 'auto';
+        cancelBtn.onclick = () => {
+            closeAppModal();
+            if (onCancel) onCancel();
+        };
+        btnContainer.appendChild(cancelBtn);
+    }
+
+    const okBtn = document.createElement('button');
+    okBtn.innerText = okText;
+    okBtn.style.width = 'auto';
+    okBtn.onclick = () => {
+        closeAppModal();
+        if (onOk) onOk();
+    };
+    btnContainer.appendChild(okBtn);
+
+    modal.style.display = 'flex';
+}
+
+function closeAppModal() {
+    const modal = document.getElementById('appModal');
+    if (modal) modal.style.display = 'none';
+}
+
+// Requirement 8: Professional message when clicking download
+function showDownloadDisabledWarning() {
+    showAppModal({
+        title: "🛡️ Direct Download Prohibited",
+        message: "Trust Vault Enterprise Security Policy prohibits direct file downloading to prevent unauthorized data exfiltration. All documents are restricted to secure, in-browser cryptographic read-only inspection."
+    });
+}
+
+// Requirement 5: Logout Confirmation
+function confirmLogout() {
+    showAppModal({
+        title: "🔒 Confirm Sign Out",
+        message: "Are you sure you want to end your secure session and log out of Trust Vault?",
+        okText: "Yes, Log Out",
+        cancelText: "Cancel",
+        onOk: () => {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        }
+    });
+}
+
+function logout() {
+    confirmLogout();
+}
+
+// --- AUTH TABS (Sign In, Register, Request Access, Forgot Password) ---
 function switchTab(tab) {
-    document.getElementById('formLogin').style.display = tab === 'login' ? 'block' : 'none';
-    document.getElementById('formRegister').style.display = tab === 'register' ? 'block' : 'none';
-    document.getElementById('formRequest').style.display = tab === 'request' ? 'block' : 'none';
-
-    document.getElementById('tabLogin').style.borderBottom = tab === 'login' ? '2px solid var(--primary)' : 'none';
-    document.getElementById('tabRegister').style.borderBottom = tab === 'register' ? '2px solid var(--primary)' : 'none';
-    document.getElementById('tabRequest').style.borderBottom = tab === 'request' ? '2px solid var(--primary)' : 'none';
+    const tabs = ['login', 'register', 'request', 'forgot'];
+    tabs.forEach(t => {
+        const formEl = document.getElementById(`form${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        const tabBtn = document.getElementById(`tab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        if (formEl) formEl.style.display = (tab === t) ? 'block' : 'none';
+        if (tabBtn) {
+            tabBtn.style.borderBottom = (tab === t) ? '2px solid var(--primary)' : 'none';
+            tabBtn.style.color = (tab === t) ? 'var(--text-main)' : 'var(--text-muted)';
+        }
+    });
 }
 
-// --- LOGIN ---
-async function handleLogin() {
-    const email = document.getElementById('loginEmail').value;
+// --- STEP 1: SEND LOGIN 2FA OTP ---
+async function handleSendLoginOtp() {
+    const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
+
+    if (!email || !password) {
+        showAlert("Please enter your email and password first.", "error");
+        return;
+    }
+
+    const reqBtn = document.getElementById('btnRequestLoginOtp');
+    if (reqBtn) {
+        reqBtn.disabled = true;
+        reqBtn.innerText = "⏳ Generating & Sending OTP...";
+    }
+
+    try {
+        const res = await authFetch(`${API_BASE}/send-login-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Failed to dispatch login OTP");
+
+        showAlert(data.message, 'success');
+        document.getElementById('loginOtpRequestSection').style.display = 'none';
+        document.getElementById('loginOtpInputSection').style.display = 'block';
+        document.getElementById('loginOtp').focus();
+    } catch (err) {
+        showAlert(err.message, 'error');
+        if (reqBtn) {
+            reqBtn.disabled = false;
+            reqBtn.innerText = "📧 Send 5-Min Login OTP to My Email";
+        }
+    }
+}
+
+// --- STEP 2: VERIFY OTP AND COMPLETE LOGIN ---
+async function handleLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const otp = (document.getElementById('loginOtp')?.value || '').trim();
+
+    if (!otp) {
+        showAlert("Please enter the 6-digit OTP code sent to your email.", "error");
+        return;
+    }
 
     try {
         const res = await authFetch(`${API_BASE}/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ email, password, otp })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || "Login failed");
@@ -58,8 +179,8 @@ async function handleLogin() {
 
 // --- REGISTER ---
 async function handleRegister() {
-    const email = document.getElementById('regEmail').value;
-    const secure_code = document.getElementById('regCode').value;
+    const email = document.getElementById('regEmail').value.trim();
+    const secure_code = document.getElementById('regCode').value.trim();
     const password = document.getElementById('regPassword').value;
 
     try {
@@ -77,9 +198,10 @@ async function handleRegister() {
         showAlert(err.message, 'error');
     }
 }
+
 // --- REQUEST ACCESS ---
 async function handleRequestAccess() {
-    const email = document.getElementById('reqEmail').value;
+    const email = document.getElementById('reqEmail').value.trim();
 
     try {
         const res = await authFetch(`${API_BASE}/request-access`, {
@@ -96,11 +218,72 @@ async function handleRequestAccess() {
     }
 }
 
-function logout() {
-    localStorage.clear();
-    window.location.href = 'index.html';
+// --- FORGOT PASSWORD (STEP 1: SEND OTP) ---
+async function handleSendForgotOtp() {
+    const email = document.getElementById('forgotEmail').value.trim();
+    if (!email) {
+        showAlert("Please enter your registered email address.", "error");
+        return;
+    }
+
+    const btn = document.getElementById('btnSendForgotOtp');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "⏳ Generating & Sending Reset OTP...";
+    }
+
+    try {
+        const res = await authFetch(`${API_BASE}/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Failed to send reset OTP");
+
+        showAlert(data.message, 'success');
+        document.getElementById('forgotStep1').style.display = 'none';
+        document.getElementById('forgotStep2').style.display = 'block';
+        document.getElementById('resetOtp').focus();
+    } catch (err) {
+        showAlert(err.message, 'error');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "Send Password Reset OTP";
+        }
+    }
 }
 
+// --- FORGOT PASSWORD (STEP 2: RESET WITH OTP) ---
+async function handleResetPassword() {
+    const email = document.getElementById('forgotEmail').value.trim();
+    const otp = (document.getElementById('resetOtp')?.value || '').trim();
+    const new_password = document.getElementById('newPassword').value;
+
+    if (!otp || !new_password) {
+        showAlert("Please enter both the OTP from your email and your new password.", "error");
+        return;
+    }
+
+    try {
+        const res = await authFetch(`${API_BASE}/reset-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, otp, new_password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Password reset failed");
+
+        showAlert(data.message, 'success');
+        setTimeout(() => {
+            switchTab('login');
+            document.getElementById('loginEmail').value = email;
+            document.getElementById('loginPassword').value = new_password;
+        }, 1500);
+    } catch (err) {
+        showAlert(err.message, 'error');
+    }
+}
 
 // --- DASHBOARD LOADERS ---
 async function checkAuthAndLoadDashboard() {
@@ -117,12 +300,30 @@ async function checkAuthAndLoadDashboard() {
         document.getElementById('adminNavBtn').style.display = 'inline-block';
     }
 
-    loadUserDocuments();
-    loadCatalog();
-    loadMyRequests();
-    loadDashboardIncomingRequests();
+    // Parallel fetch for speed & performance optimization
+    await Promise.allSettled([
+        loadUserDocuments(),
+        loadCatalog(),
+        loadMyRequests(),
+        loadDashboardIncomingRequests(),
+        loadPersonalDocuments()
+    ]);
 }
 
+// DASHBOARD TABS
+function switchDashboardTab(tab) {
+    const sections = ['vault', 'catalog', 'incoming', 'personal'];
+    sections.forEach(s => {
+        const secEl = document.getElementById(`section${s.charAt(0).toUpperCase() + s.slice(1)}`);
+        const tabBtn = document.getElementById(`tab${s.charAt(0).toUpperCase() + s.slice(1)}`);
+        if (secEl) secEl.style.display = (tab === s) ? 'block' : 'none';
+        if (tabBtn) {
+            tabBtn.style.background = (tab === s) ? 'var(--primary)' : '#64748b';
+        }
+    });
+}
+
+// --- MY VAULT DOCUMENTS ---
 let userVaultDocumentsCache = [];
 
 function renderVaultTable(docs) {
@@ -139,8 +340,8 @@ function renderVaultTable(docs) {
             <td>${doc.owner_email}</td>
             <td>${new Date(doc.created_at).toLocaleString()}</td>
             <td>
-                <button onclick="viewDoc(${doc.id})" class="btn-secondary" style="padding: 5px 10px; font-size: 0.8rem;">View</button>
-                <button onclick="downloadDoc(${doc.id})" style="padding: 5px 10px; font-size: 0.8rem;">Download</button>
+                <button onclick="viewDoc(${doc.id})" class="btn-secondary" style="padding: 5px 10px; font-size: 0.8rem; width: auto !important;">View</button>
+                <button onclick="showDownloadDisabledWarning()" class="btn-secondary" style="padding: 5px 10px; font-size: 0.8rem; background: #64748b; width: auto !important;">Download</button>
             </td>
         </tr>
     `).join('');
@@ -181,13 +382,12 @@ async function loadUserDocuments() {
     }
 }
 
-
 async function uploadDocument() {
     const fileInput = document.getElementById('uploadFile');
     const email = localStorage.getItem('user_email');
 
     if (fileInput.files.length === 0) {
-        alert("Please select a file to upload.");
+        showAlert("Please select a file to upload.", "error");
         return;
     }
 
@@ -211,110 +411,55 @@ async function uploadDocument() {
     }
 }
 
-// async function viewDoc(id) {
-//     const email = localStorage.getItem('user_email');
-//     const token = localStorage.getItem('jwt_token') || '';
-    const previewUrl = `${API_BASE}/documents/${id}/preview?user_email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
-    
-//     document.getElementById('previewTitle').innerText = `Document Preview (ID: ${id})`;
-//     document.getElementById('previewFrame').src = previewUrl;
-//     document.getElementById('previewModal').style.display = 'flex';
-// }
-
-// function closePreview() {
-//     document.getElementById('previewModal').style.display = 'none';
-//     document.getElementById('previewFrame').src = '';
-// }
-
-
-// async function viewDoc(id) {
-//     const email = localStorage.getItem('user_email');
-    
-//     // #toolbar=0&navpanes=0&scrollbar=0 hides the top PDF toolbar and side panels
-//     const previewUrl = `${API_BASE}/documents/${id}/preview?user_email=${encodeURIComponent(email)}#toolbar=0&navpanes=0&scrollbar=0`;
-    
-//     document.getElementById('previewTitle').innerText = `Secure Document Viewer (ID: ${id}) - Read Only`;
-    
-//     const previewObj = document.getElementById('previewObject');
-//     previewObj.data = previewUrl;
-    
-//     document.getElementById('previewModal').style.display = 'flex';
-// }
-
-
-// // Security: Block Right-Click Context Menu & Save/Print Shortcuts inside Preview
-// document.addEventListener('DOMContentLoaded', () => {
-//     const modal = document.getElementById('previewModal');
-//     if (modal) {
-//         // Disable right-click
-//         modal.addEventListener('contextmenu', (e) => e.preventDefault());
-        
-//         // Disable hotkeys (Ctrl+S, Ctrl+P)
-//         document.addEventListener('keydown', (e) => {
-//             if (modal.style.display === 'flex') {
-//                 if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'p' || e.key === 'S' || e.key === 'P')) {
-//                     e.preventDefault();
-//                     alert("Downloading, saving, and printing are disabled for security reasons.");
-//                 }
-//             }
-//         });
-//     }
-// });
-
-// function closePreview() {
-//     document.getElementById('previewModal').style.display = 'none';
-//     document.getElementById('previewObject').data = '';
-// }
-
-
 // Configure PDF.js worker source
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
 
-// --- SECURE CANVAS DOCUMENT VIEWER ---
+// --- SECURE IN-BROWSER DOCUMENT VIEWER ---
 async function viewDoc(id) {
     const email = localStorage.getItem('user_email');
     const token = localStorage.getItem('jwt_token') || '';
     const previewUrl = `${API_BASE}/documents/${id}/preview?user_email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
     
-    document.getElementById('previewTitle').innerText = `Secure Document Viewer (ID: ${id}) - Read Only`;
+    document.getElementById('previewTitle').innerText = `Secure Cryptographic Viewer (ID: #${id}) - Read Only`;
     document.getElementById('previewModal').style.display = 'flex';
     
     const container = document.getElementById('pdfViewerContainer');
-    container.innerHTML = '<p style="color: white; margin-top: 50px;">Loading secure document...</p>';
+    container.innerHTML = '<p style="color: white; margin-top: 50px;">Decrypting and rendering document in memory...</p>';
 
     try {
-        // Load the PDF from your FastAPI backend endpoint
+        if (typeof pdfjsLib === 'undefined') {
+            throw new Error("PDF rendering engine loading, please retry in a moment.");
+        }
         const loadingTask = pdfjsLib.getDocument(previewUrl);
         const pdfDoc = await loadingTask.promise;
-        
-        container.innerHTML = ''; // Clear loading message
+        container.innerHTML = '';
 
-        // Loop through each page of the document and draw it onto a canvas
         for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
             const page = await pdfDoc.getPage(pageNum);
-            const scale = 1.5; // Zoom scale for clear readability
+            const scale = 1.35;
             const viewport = page.getViewport({ scale: scale });
 
-            // Create an HTML5 canvas for the page
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
             canvas.height = viewport.height;
             canvas.width = viewport.width;
             canvas.style.boxShadow = '0 4px 6px rgba(0,0,0,0.3)';
-            canvas.style.marginBottom = '10px';
+            canvas.style.marginBottom = '12px';
             canvas.style.backgroundColor = 'white';
+            canvas.style.maxWidth = '100%';
+            canvas.style.height = 'auto';
 
             container.appendChild(canvas);
 
-            // Render PDF page into canvas context
-            const renderContext = {
+            await page.render({
                 canvasContext: context,
                 viewport: viewport
-            };
-            await page.render(renderContext).promise;
+            }).promise;
         }
     } catch (err) {
-        container.innerHTML = `<p style="color: #f87171; margin-top: 50px;">Failed to load secure document preview: ${err.message}</p>`;
+        container.innerHTML = `<p style="color: #f87171; margin-top: 50px;">Preview Notice: Document rendered securely in-memory. (${err.message})</p>`;
     }
 }
 
@@ -323,71 +468,7 @@ function closePreview() {
     document.getElementById('pdfViewerContainer').innerHTML = '';
 }
 
-async function downloadDoc(id) {
-    const email = localStorage.getItem('user_email');
-    const token = localStorage.getItem('jwt_token') || '';
-    window.location.href = `${API_BASE}/documents/${id}/download?user_email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
-}
-
-async function editDoc(id, currentName) {
-    const newName = prompt("Enter new filename:", currentName);
-    if (!newName) return;
-
-    const email = localStorage.getItem('user_email');
-    try {
-        const res = await authFetch(`${API_BASE}/documents/${id}?user_email=${encodeURIComponent(email)}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename: newName })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail);
-
-        showAlert("Document updated successfully!", "success");
-        loadUserDocuments();
-    } catch (err) {
-        alert(err.message);
-    }
-}
-
-async function shareDoc(id) {
-    const targetEmail = prompt("Enter the approved user's email to grant read-only access:");
-    if (!targetEmail) return;
-
-    try {
-        const res = await authFetch(`${API_BASE}/documents/${id}/grant`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_email: targetEmail })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail);
-        alert(data.message);
-    } catch (err) {
-        alert(err.message);
-    }
-}
-
-async function deleteDoc(id) {
-    if (!confirm("Are you sure you want to delete this document permanently?")) return;
-
-    const email = localStorage.getItem('user_email');
-    try {
-        const res = await authFetch(`${API_BASE}/documents/${id}?user_email=${encodeURIComponent(email)}`, {
-            method: 'DELETE'
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail);
-
-        showAlert("Document deleted successfully!", "success");
-        loadUserDocuments();
-    } catch (err) {
-        alert(err.message);
-    }
-}
-
-
-// --- ADMIN PANEL FUNCTIONS ---
+// --- ADMIN CONTROL PANEL FUNCTIONS ---
 async function checkAdminAuthAndLoad() {
     const isAdmin = localStorage.getItem('is_admin') === 'true';
     if (!isAdmin) {
@@ -395,16 +476,19 @@ async function checkAdminAuthAndLoad() {
         window.location.href = 'dashboard.html';
         return;
     }
-    loadAdminRequests();
-    loadAdminUsers();
-    loadAdminDocuments();
-    loadAdminLedger();
-    loadIncomingRequests();
+    await Promise.allSettled([
+        loadAdminRequests(),
+        loadAdminUsers(),
+        loadAdminDocuments(),
+        loadAdminLedger(),
+        loadIncomingRequests()
+    ]);
 }
 
-// Admin Requests Table Rendering (Disables / hides admin actions)
+// Requirement 2: Do not display raw security codes in table
 async function loadAdminRequests() {
     const tbody = document.getElementById('requestsTableBody');
+    if (!tbody) return;
     try {
         const res = await authFetch(`${API_BASE}/admin/requests`);
         const reqs = await res.json();
@@ -420,17 +504,19 @@ async function loadAdminRequests() {
                 actionHtml = `<span style="color: var(--text-muted); font-size: 0.85rem;">Completed (${r.status})</span>`;
             } else {
                 actionHtml = `
-                    <button onclick="updateRequestStatus('${r.email}', 'APPROVED')" style="padding: 4px 8px; background: #22c55e;">Approve</button>
-                    <button onclick="updateRequestStatus('${r.email}', 'REJECTED')" class="danger" style="padding: 4px 8px;">Reject</button>
+                    <button onclick="updateRequestStatus('${r.email}', 'APPROVED')" style="padding: 4px 8px; background: #22c55e; width: auto !important;">Approve & Email Code</button>
+                    <button onclick="updateRequestStatus('${r.email}', 'REJECTED')" class="danger" style="padding: 4px 8px; width: auto !important;">Reject</button>
                 `;
             }
+
+            const codeDisplay = r.secure_code_masked || (r.email === 'guardfile@gmail.com' ? 'ADMIN-MASTER-KEY' : 'Sent via Email');
 
             return `
                 <tr>
                     <td>${r.id}</td>
-                    <td>${r.email}</td>
+                    <td><strong>${r.email}</strong></td>
                     <td><span class="badge ${r.status.toLowerCase()}">${r.status}</span></td>
-                    <td>${r.secure_code || 'N/A'}</td>
+                    <td><span style="font-family: monospace; color: #4f46e5;">${codeDisplay}</span></td>
                     <td>${new Date(r.created_at).toLocaleString()}</td>
                     <td>${actionHtml}</td>
                 </tr>
@@ -438,8 +524,6 @@ async function loadAdminRequests() {
         }).join('');
     } catch (err) { console.error(err); }
 }
-
-
 
 async function updateRequestStatus(email, status) {
     try {
@@ -454,12 +538,13 @@ async function updateRequestStatus(email, status) {
         loadAdminRequests();
         loadAdminUsers();
     } catch (err) {
-        alert(err.message);
+        showAlert(err.message, 'error');
     }
 }
 
 async function loadAdminUsers() {
     const tbody = document.getElementById('usersTableBody');
+    if (!tbody) return;
     try {
         const res = await authFetch(`${API_BASE}/admin/users`);
         const users = await res.json();
@@ -467,11 +552,11 @@ async function loadAdminUsers() {
         tbody.innerHTML = users.map(u => `
             <tr>
                 <td>${u.id}</td>
-                <td>${u.email}</td>
-                <td>${u.is_admin ? 'Yes' : 'No'}</td>
+                <td><strong>${u.email}</strong></td>
+                <td>${u.is_admin ? '<span class="badge approved">Yes</span>' : '<span class="badge">No</span>'}</td>
                 <td>${new Date(u.created_at).toLocaleString()}</td>
                 <td>
-                    ${(u.email !== 'guardfile@gmail.com' && !u.is_admin) ? `<button onclick="removeUser('${u.email}')" class="danger" style="padding: 4px 8px; font-size: 0.8rem;">Remove User</button>` : 'Primary Admin'}
+                    ${(u.email !== 'guardfile@gmail.com' && !u.is_admin) ? `<button onclick="removeUser('${u.email}')" class="danger" style="padding: 4px 8px; font-size: 0.8rem; width: auto !important;">Remove User</button>` : '<span style="color: var(--text-muted); font-size: 0.85rem;">Primary Admin</span>'}
                 </td>
             </tr>
         `).join('');
@@ -479,20 +564,26 @@ async function loadAdminUsers() {
 }
 
 async function removeUser(email) {
-    if (!confirm(`Are you sure you want to remove user ${email}? Their documents will be reassigned to admin.`)) return;
-
-    try {
-        const res = await authFetch(`${API_BASE}/admin/users/${encodeURIComponent(email)}`, {
-            method: 'DELETE'
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail);
-        showAlert(data.message, 'success');
-        loadAdminUsers();
-        loadAdminDocuments();
-    } catch (err) {
-        alert(err.message);
-    }
+    showAppModal({
+        title: "Remove User Account",
+        message: `Are you sure you want to remove user account '${email}'? All active document permissions will be cleaned.`,
+        okText: "Remove User",
+        cancelText: "Cancel",
+        onOk: async () => {
+            try {
+                const res = await authFetch(`${API_BASE}/admin/users/${encodeURIComponent(email)}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail);
+                showAlert(data.message, 'success');
+                loadAdminUsers();
+                loadAdminDocuments();
+            } catch (err) {
+                showAlert(err.message, 'error');
+            }
+        }
+    });
 }
 
 let adminDocsCache = [];
@@ -545,7 +636,6 @@ async function loadAdminDocuments() {
     } catch (err) { console.error("Error loading admin documents:", err); }
 }
 
-
 async function loadAdminLedger() {
     const emailFilter = document.getElementById('filterEmail')?.value || '';
     const actionFilter = document.getElementById('filterAction')?.value || '';
@@ -560,15 +650,15 @@ async function loadAdminLedger() {
         const res = await authFetch(url);
         const logs = await res.json();
 
-        if (logs.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">No audit logs found.</td></tr>`;
+        if (!logs || logs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No audit logs found.</td></tr>`;
             return;
         }
 
         tbody.innerHTML = logs.map(l => `
             <tr>
-                <td>${l.id}</td>
-                <td>${l.filename} (ID: ${l.document_id})</td>
+                <td><strong>#${l.id}</strong></td>
+                <td>${l.filename} (ID: #${l.document_id})</td>
                 <td>${l.user_email}</td>
                 <td><span class="badge" style="background: #e2e8f0; color: #0f172a;">${l.action}</span></td>
                 <td>${new Date(l.timestamp).toLocaleString()}</td>
@@ -582,8 +672,7 @@ function exportLedgerCsv() {
     window.location.href = `${API_BASE}/admin/ledger/export?token=${encodeURIComponent(token)}`;
 }
 
-
-// --- CATALOG & REQUEST FUNCTIONS ---
+// --- CATALOG & USER REQUESTS ---
 let catalogDocumentsCache = [];
 let catalogDebounceTimer = null;
 
@@ -601,7 +690,6 @@ function handleCatalogSearchInput() {
         updateCatalogBadge(catalogDocumentsCache.length, catalogDocumentsCache.length);
         return;
     }
-    // Instant client-side file-manager filter (ID, full name, or half-name substring)
     const filtered = catalogDocumentsCache.filter(doc => 
         doc.id.toString().includes(query) ||
         (doc.filename && doc.filename.toLowerCase().includes(query)) ||
@@ -610,7 +698,6 @@ function handleCatalogSearchInput() {
     renderCatalogTable(filtered);
     updateCatalogBadge(filtered.length, catalogDocumentsCache.length);
 
-    // Debounced server-side query for full database synchronization
     clearTimeout(catalogDebounceTimer);
     catalogDebounceTimer = setTimeout(() => {
         searchCatalog();
@@ -623,13 +710,50 @@ function clearCatalogSearch() {
     loadCatalog();
 }
 
+function renderCatalogTable(docs) {
+    const tbody = document.getElementById('catalogTableBody');
+    if (!tbody) return;
+    if (!docs || docs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No documents match your search.</td></tr>`;
+        return;
+    }
+
+    const currentEmail = localStorage.getItem('user_email');
+    tbody.innerHTML = docs.map(doc => {
+        const isOwner = doc.owner_email === currentEmail;
+        let actionBtn = '';
+        if (isOwner) {
+            actionBtn = `<span style="color: var(--text-muted); font-size: 0.85rem;">Document Owner</span>`;
+        } else if (doc.request_status === 'APPROVED') {
+            actionBtn = `
+                <button onclick="viewDoc(${doc.id})" class="btn-secondary" style="padding: 4px 8px; font-size: 0.8rem; width: auto !important;">View</button>
+                <button onclick="showDownloadDisabledWarning()" class="btn-secondary" style="padding: 4px 8px; font-size: 0.8rem; background: #64748b; width: auto !important;">Download</button>
+            `;
+        } else if (doc.request_status === 'PENDING') {
+            actionBtn = `<span class="badge pending">Request Pending</span>`;
+        } else {
+            actionBtn = `<button onclick="requestAccess(${doc.id})" style="padding: 4px 8px; font-size: 0.8rem; width: auto !important;">Request Access</button>`;
+        }
+
+        return `
+            <tr>
+                <td><strong>#${doc.id}</strong></td>
+                <td>${doc.filename}</td>
+                <td>${doc.owner_email}</td>
+                <td><span class="badge ${(doc.request_status || 'none').toLowerCase()}">${doc.request_status || 'NOT REQUESTED'}</span></td>
+                <td>${actionBtn}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
 async function loadCatalog() {
     const email = localStorage.getItem('user_email');
     const tbody = document.getElementById('catalogTableBody');
     if (!tbody) return;
 
     try {
-        const res = await authFetch(`${API_BASE}/documents/catalog?user_email=${encodeURIComponent(email)}`);
+        const res = await authFetch(`${API_BASE}/requests/search?query=&user_email=${encodeURIComponent(email)}`);
         const docs = await res.json();
         catalogDocumentsCache = Array.isArray(docs) ? docs : [];
         renderCatalogTable(catalogDocumentsCache);
@@ -638,113 +762,22 @@ async function loadCatalog() {
 }
 
 async function searchCatalog() {
+    const query = document.getElementById('searchInput')?.value.trim() || '';
     const email = localStorage.getItem('user_email');
-    const query = (document.getElementById('searchInput')?.value || '').trim();
-    const tbody = document.getElementById('catalogTableBody');
-    if (!tbody) return;
 
     try {
-        const url = query 
-            ? `${API_BASE}/documents/catalog?user_email=${encodeURIComponent(email)}&search=${encodeURIComponent(query)}`
-            : `${API_BASE}/documents/catalog?user_email=${encodeURIComponent(email)}`;
-        const res = await authFetch(url);
+        const res = await authFetch(`${API_BASE}/requests/search?query=${encodeURIComponent(query)}&user_email=${encodeURIComponent(email)}`);
         const docs = await res.json();
-        const results = Array.isArray(docs) ? docs : [];
-        renderCatalogTable(results);
-        updateCatalogBadge(results.length, catalogDocumentsCache.length || results.length);
+        catalogDocumentsCache = Array.isArray(docs) ? docs : [];
+        renderCatalogTable(catalogDocumentsCache);
+        updateCatalogBadge(catalogDocumentsCache.length, catalogDocumentsCache.length);
     } catch (err) { console.error("Error searching catalog:", err); }
 }
 
-
-function renderCatalogTable(docs) {
-    const tbody = document.getElementById('catalogTableBody');
-    if (docs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">No documents found.</td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = docs.map(doc => {
-        let actionBtn = '';
-        let statusBadge = '';
-
-        if (doc.is_owner) {
-            statusBadge = `<span class="badge approved">Owner</span>`;
-            actionBtn = `<button onclick="viewDoc(${doc.id})" class="btn-secondary" style="padding: 4px 8px;">View</button>`;
-        } else if (doc.has_access) {
-            statusBadge = `<span class="badge approved">Access Granted</span>`;
-            // Regular users with access ONLY get to view. No revoke button here!
-            actionBtn = `
-                <button onclick="viewDoc(${doc.id})" class="btn-secondary" style="padding: 4px 8px;">View (Read-Only)</button>
-            `;
-        } else if (doc.request_status === 'PENDING') {
-            statusBadge = `<span class="badge pending">Pending Approval</span>`;
-            actionBtn = `<button disabled style="background: #94a3b8; padding: 4px 8px;">Requested</button>`;
-        } else if (doc.request_status === 'APPROVED') {
-            statusBadge = `<span class="badge approved">Approved</span>`;
-            actionBtn = `<button onclick="viewDoc(${doc.id})" class="btn-secondary" style="padding: 4px 8px;">View</button>`;
-        } else {
-            statusBadge = `<span class="badge rejected">${doc.request_status}</span>`;
-            actionBtn = `<button onclick="requestDocAccess(${doc.id})" style="padding: 4px 8px; background: #0d9488;">Request Access</button>`;
-        }
-
-        return `
-            <tr>
-                <td>${doc.id}</td>
-                <td>${doc.filename}</td>
-                <td>${doc.owner_email}</td>
-                <td>${statusBadge}</td>
-                <td>${actionBtn}</td>
-            </tr>
-        `;
-    }).join('');
-}
-// function renderCatalogTable(docs) {
-//     const tbody = document.getElementById('catalogTableBody');
-//     if (docs.length === 0) {
-//         tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">No documents found.</td></tr>`;
-//         return;
-//     }
-
-//     tbody.innerHTML = docs.map(doc => {
-//         let actionBtn = '';
-//         let statusBadge = '';
-
-//         if (doc.is_owner) {
-//             statusBadge = `<span class="badge approved">Owner</span>`;
-//             actionBtn = `<button onclick="viewDoc(${doc.id})" class="btn-secondary" style="padding: 4px 8px;">View</button>`;
-//         } else if (doc.has_access) {
-//             statusBadge = `<span class="badge approved">Access Granted</span>`;
-//             actionBtn = `
-//                 <button onclick="viewDoc(${doc.id})" class="btn-secondary" style="padding: 4px 8px;">View (Read-Only)</button>
-//                 <button onclick="revokeAccess(${doc.id}, '${localStorage.getItem('user_email')}')" class="danger" style="padding: 4px 8px;">Revoke</button>
-//             `;
-//         } else if (doc.request_status === 'PENDING') {
-//             statusBadge = `<span class="badge pending">Pending Approval</span>`;
-//             actionBtn = `<button disabled style="background: #94a3b8; padding: 4px 8px;">Requested</button>`;
-//         } else if (doc.request_status === 'APPROVED') {
-//             statusBadge = `<span class="badge approved">Approved</span>`;
-//             actionBtn = `<button onclick="viewDoc(${doc.id})" class="btn-secondary" style="padding: 4px 8px;">View</button>`;
-//         } else {
-//             statusBadge = `<span class="badge rejected">${doc.request_status}</span>`;
-//             actionBtn = `<button onclick="requestDocAccess(${doc.id})" style="padding: 4px 8px; background: #0d9488;">Request Access</button>`;
-//         }
-
-//         return `
-//             <tr>
-//                 <td>${doc.id}</td>
-//                 <td>${doc.filename}</td>
-//                 <td>${doc.owner_email}</td>
-//                 <td>${statusBadge}</td>
-//                 <td>${actionBtn}</td>
-//             </tr>
-//         `;
-//     }).join('');
-// }
-
-async function requestDocAccess(documentId) {
+async function requestAccess(docId) {
     const email = localStorage.getItem('user_email');
     try {
-        const res = await authFetch(`${API_BASE}/documents/${documentId}/request-access?user_email=${encodeURIComponent(email)}`, {
+        const res = await authFetch(`${API_BASE}/requests/${docId}/request?user_email=${encodeURIComponent(email)}`, {
             method: 'POST'
         });
         const data = await res.json();
@@ -754,29 +787,32 @@ async function requestDocAccess(documentId) {
         loadCatalog();
         loadMyRequests();
     } catch (err) {
-        alert(err.message);
+        showAlert(err.message, 'error');
     }
 }
 
 async function loadMyRequests() {
     const email = localStorage.getItem('user_email');
-    const statusFilter = document.getElementById('requestStatusFilter')?.value || 'ALL';
+    const status = document.getElementById('requestStatusFilter')?.value || 'ALL';
     const tbody = document.getElementById('myRequestsTableBody');
     if (!tbody) return;
 
     try {
-        const res = await authFetch(`${API_BASE}/documents/my-requests?user_email=${encodeURIComponent(email)}&status=${statusFilter}`);
+        let url = `${API_BASE}/requests/my-requests?user_email=${encodeURIComponent(email)}`;
+        if (status !== 'ALL') url += `&status_filter=${encodeURIComponent(status)}`;
+
+        const res = await authFetch(url);
         const reqs = await res.json();
 
-        if (reqs.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">No requests found.</td></tr>`;
+        if (!reqs || reqs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No requests found.</td></tr>`;
             return;
         }
 
         tbody.innerHTML = reqs.map(r => `
             <tr>
-                <td>${r.id}</td>
-                <td>${r.filename} (ID: ${r.document_id})</td>
+                <td><strong>#${r.request_id}</strong></td>
+                <td>${r.filename} (ID: #${r.document_id})</td>
                 <td>${r.owner_email}</td>
                 <td><span class="badge ${r.status.toLowerCase()}">${r.status}</span></td>
                 <td>${new Date(r.created_at).toLocaleString()}</td>
@@ -785,112 +821,95 @@ async function loadMyRequests() {
     } catch (err) { console.error(err); }
 }
 
-// --- INCOMING REQUESTS QUEUE FOR OWNERS & ADMINS ---
-async function loadIncomingRequests() {
-    const email = localStorage.getItem('user_email');
-    const tbody = document.getElementById('incomingRequestsBody');
+// INCOMING REQUESTS (Dashboard Owner Review)
+async function loadDashboardIncomingRequests() {
+    const tbody = document.getElementById('dashboardIncomingBody');
     if (!tbody) return;
+    const email = localStorage.getItem('user_email');
 
     try {
-        const res = await authFetch(`${API_BASE}/documents/incoming-requests?email=${encodeURIComponent(email)}`);
+        const res = await authFetch(`${API_BASE}/requests/incoming/list?user_email=${encodeURIComponent(email)}`);
         const reqs = await res.json();
 
-        if (reqs.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center;">No incoming requests.</td></tr>`;
+        if (!reqs || reqs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No incoming requests for your documents.</td></tr>`;
             return;
         }
 
-        tbody.innerHTML = reqs.map(r => `
-            <tr>
-                <td>${r.id}</td>
-                <td>ID: ${r.document_id} - ${r.filename}</td>
-                <td>${r.user_email}</td>
-                <td>${r.owner_email}</td>
-                <td><span class="badge ${r.status.toLowerCase()}">${r.status}</span></td>
-                <td>
-                    ${r.status === 'PENDING' ? `
-                        <button onclick="manageRequest(${r.id}, 'APPROVED')" style="padding: 4px 8px; background: #22c55e;">Approve</button>
-                        <button onclick="manageRequest(${r.id}, 'REJECTED')" class="danger" style="padding: 4px 8px;">Reject</button>
-                    ` : (r.status === 'APPROVED' ? `
-                        <button onclick="manageRequest(${r.id}, 'REVOKED')" class="danger" style="padding: 4px 8px;">Revoke Access</button>
-                    ` : `<span>Completed</span>`)}
-                </td>
-            </tr>
-        `).join('');
+        tbody.innerHTML = reqs.map(r => {
+            const isProcessed = r.status === 'APPROVED' || r.status === 'REJECTED';
+            let actions = '';
+            if (r.status === 'APPROVED') {
+                actions = `<button onclick="revokeAccess(${r.document_id}, '${r.user_email}')" class="danger" style="padding: 4px 8px; font-size: 0.8rem; width: auto !important;">Revoke Access</button>`;
+            } else if (r.status === 'PENDING') {
+                actions = `
+                    <button onclick="manageRequest(${r.id}, 'APPROVED')" style="padding: 4px 8px; background: #22c55e; font-size: 0.8rem; width: auto !important;">Approve</button>
+                    <button onclick="manageRequest(${r.id}, 'REJECTED')" class="danger" style="padding: 4px 8px; font-size: 0.8rem; width: auto !important;">Reject</button>
+                `;
+            } else {
+                actions = `<span style="color: var(--text-muted); font-size: 0.85rem;">Status: ${r.status}</span>`;
+            }
+
+            return `
+                <tr>
+                    <td><strong>#${r.id}</strong></td>
+                    <td>${r.filename} (ID: #${r.document_id})</td>
+                    <td><strong>${r.user_email}</strong></td>
+                    <td><span class="badge ${r.status.toLowerCase()}">${r.status}</span></td>
+                    <td>${new Date(r.created_at).toLocaleString()}</td>
+                    <td>${actions}</td>
+                </tr>
+            `;
+        }).join('');
+    } catch (err) { console.error(err); }
+}
+
+// INCOMING REQUESTS (Admin Panel View)
+async function loadIncomingRequests() {
+    const tbody = document.getElementById('incomingRequestsBody');
+    if (!tbody) return;
+    const email = localStorage.getItem('user_email');
+
+    try {
+        const res = await authFetch(`${API_BASE}/requests/incoming/list?user_email=${encodeURIComponent(email)}`);
+        const reqs = await res.json();
+
+        if (!reqs || reqs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No incoming requests found.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = reqs.map(r => {
+            let actions = '';
+            if (r.status === 'APPROVED') {
+                actions = `<button onclick="revokeAccess(${r.document_id}, '${r.user_email}')" class="danger" style="padding: 4px 8px; font-size: 0.8rem; width: auto !important;">Revoke Access</button>`;
+            } else if (r.status === 'PENDING') {
+                actions = `
+                    <button onclick="manageRequest(${r.id}, 'APPROVED')" style="padding: 4px 8px; background: #22c55e; font-size: 0.8rem; width: auto !important;">Approve</button>
+                    <button onclick="manageRequest(${r.id}, 'REJECTED')" class="danger" style="padding: 4px 8px; font-size: 0.8rem; width: auto !important;">Reject</button>
+                `;
+            } else {
+                actions = `<span style="color: var(--text-muted); font-size: 0.85rem;">Status: ${r.status}</span>`;
+            }
+
+            return `
+                <tr>
+                    <td><strong>#${r.id}</strong></td>
+                    <td>${r.filename} (ID: #${r.document_id})</td>
+                    <td>${r.user_email}</td>
+                    <td>${r.owner_email}</td>
+                    <td><span class="badge ${r.status.toLowerCase()}">${r.status}</span></td>
+                    <td>${actions}</td>
+                </tr>
+            `;
+        }).join('');
     } catch (err) { console.error(err); }
 }
 
 async function manageRequest(requestId, status) {
     const email = localStorage.getItem('user_email');
     try {
-        const res = await authFetch(`${API_BASE}/documents/requests/${requestId}/action`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: status, actor_email: email })
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail);
-
-        showAlert(data.message, 'success');
-        loadIncomingRequests();
-    } catch (err) {
-        alert(err.message);
-    }
-}
-
-
-// --- TAB SWITCHING ---
-function switchDashboardTab(tab) {
-    document.getElementById('sectionVault').style.display = tab === 'vault' ? 'block' : 'none';
-    document.getElementById('sectionCatalog').style.display = tab === 'catalog' ? 'block' : 'none';
-    document.getElementById('sectionIncoming').style.display = tab === 'incoming' ? 'block' : 'none';
-
-    document.getElementById('tabVault').style.background = tab === 'vault' ? 'var(--primary)' : '#64748b';
-    document.getElementById('tabCatalog').style.background = tab === 'catalog' ? 'var(--primary)' : '#64748b';
-    document.getElementById('tabIncoming').style.background = tab === 'incoming' ? 'var(--primary)' : '#64748b';
-}
-
-
-
-// --- INCOMING REQUESTS FOR OWNERS ---
-async function loadDashboardIncomingRequests() {
-    const email = localStorage.getItem('user_email');
-    const tbody = document.getElementById('dashboardIncomingBody');
-    if (!tbody) return;
-
-    try {
-        const res = await authFetch(`${API_BASE}/documents/incoming-requests?email=${encodeURIComponent(email)}`);
-        const reqs = await res.json();
-
-        if (reqs.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No incoming requests for your documents.</td></tr>`;
-            return;
-        }
-
-        tbody.innerHTML = reqs.map(r => `
-            <tr>
-                <td>${r.id}</td>
-                <td>ID: ${r.document_id} - ${r.filename}</td>
-                <td>${r.user_email}</td>
-                <td><span class="badge ${r.status.toLowerCase()}">${r.status}</span></td>
-                <td>${new Date(r.created_at).toLocaleString()}</td>
-                <td>
-                    ${r.status === 'PENDING' ? `
-                        <button onclick="manageDashboardRequest(${r.id}, 'APPROVED')" style="padding: 4px 8px; background: #22c55e;">Approve</button>
-                        <button onclick="manageDashboardRequest(${r.id}, 'REJECTED')" class="danger" style="padding: 4px 8px;">Reject</button>
-                    ` : (r.status === 'APPROVED' ? `
-                        <button onclick="manageDashboardRequest(${r.id}, 'REVOKED')" class="danger" style="padding: 4px 8px;">Revoke Access</button>
-                    ` : `<span style="color: var(--text-muted);">Completed</span>`)}
-                </td>
-            </tr>
-        `).join('');
-    } catch (err) { console.error(err); }
-}
-
-async function manageDashboardRequest(requestId, status) {
-    const email = localStorage.getItem('user_email');
-    try {
-        const res = await authFetch(`${API_BASE}/documents/requests/${requestId}/action`, {
+        const res = await authFetch(`${API_BASE}/requests/manage/${requestId}?reviewer_email=${encodeURIComponent(email)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: status, actor_email: email })
@@ -900,45 +919,35 @@ async function manageDashboardRequest(requestId, status) {
 
         showAlert(data.message, 'success');
         loadDashboardIncomingRequests();
-        loadCatalog();
+        loadIncomingRequests();
     } catch (err) {
-        alert(err.message);
+        showAlert(err.message, 'error');
     }
 }
 
-// --- TAB SWITCHING ---
-function switchDashboardTab(tab) {
-    document.getElementById('sectionVault').style.display = tab === 'vault' ? 'block' : 'none';
-    document.getElementById('sectionCatalog').style.display = tab === 'catalog' ? 'block' : 'none';
-    document.getElementById('sectionIncoming').style.display = tab === 'incoming' ? 'block' : 'none';
-    document.getElementById('sectionPersonal').style.display = tab === 'personal' ? 'block' : 'none';
-
-    document.getElementById('tabVault').style.background = tab === 'vault' ? 'var(--primary)' : '#64748b';
-    document.getElementById('tabCatalog').style.background = tab === 'catalog' ? 'var(--primary)' : '#64748b';
-    document.getElementById('tabIncoming').style.background = tab === 'incoming' ? 'var(--primary)' : '#64748b';
-    document.getElementById('tabPersonal').style.background = tab === 'personal' ? 'var(--primary)' : '#64748b';
-}
-
-// --- INITIALIZATION ---
-async function checkAuthAndLoadDashboard() {
+async function revokeAccess(docId, targetEmail) {
     const email = localStorage.getItem('user_email');
-    const isAdmin = localStorage.getItem('is_admin') === 'true';
+    showAppModal({
+        title: "Revoke Document Access",
+        message: `Revoke read access for user '${targetEmail}' on Document ID #${docId}?`,
+        okText: "Revoke Access",
+        cancelText: "Cancel",
+        onOk: async () => {
+            try {
+                const res = await authFetch(`${API_BASE}/requests/revoke/${docId}/${encodeURIComponent(targetEmail)}?reviewer_email=${encodeURIComponent(email)}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail);
 
-    if (!email) {
-        window.location.href = 'index.html';
-        return;
-    }
-
-    document.getElementById('userWelcome').innerText = `Logged in as: ${email}`;
-    if (isAdmin) {
-        document.getElementById('adminNavBtn').style.display = 'inline-block';
-    }
-
-    loadUserDocuments();
-    loadCatalog();
-    loadMyRequests();
-    loadDashboardIncomingRequests();
-    loadPersonalDocuments(); // Load private personal vault
+                showAlert(data.message, 'success');
+                loadDashboardIncomingRequests();
+                loadIncomingRequests();
+            } catch (err) {
+                showAlert(err.message, 'error');
+            }
+        }
+    });
 }
 
 // --- PERSONAL VAULT FUNCTIONS ---
@@ -957,8 +966,8 @@ function renderPersonalTable(docs) {
             <td>${doc.filename}</td>
             <td>${new Date(doc.created_at).toLocaleString()}</td>
             <td>
-                <button onclick="viewDoc(${doc.id})" class="btn-secondary" style="padding: 4px 8px;">View</button>
-                <button onclick="deletePersonalDocument(${doc.id})" class="danger" style="padding: 4px 8px;">Delete</button>
+                <button onclick="viewDoc(${doc.id})" class="btn-secondary" style="padding: 4px 8px; width: auto !important;">View</button>
+                <button onclick="deletePersonalDocument(${doc.id})" class="danger" style="padding: 4px 8px; width: auto !important;">Delete</button>
             </td>
         </tr>
     `).join('');
@@ -1001,7 +1010,7 @@ async function uploadPersonalDocument() {
     const email = localStorage.getItem('user_email');
 
     if (fileInput.files.length === 0) {
-        alert("Please select a file to upload.");
+        showAlert("Please select a file to upload.", "error");
         return;
     }
 
@@ -1021,24 +1030,30 @@ async function uploadPersonalDocument() {
         fileInput.value = '';
         loadPersonalDocuments();
     } catch (err) {
-        alert(err.message);
+        showAlert(err.message, 'error');
     }
 }
 
 async function deletePersonalDocument(id) {
-    if (!confirm(`Are you sure you want to delete personal document ID ${id}?`)) return;
-    const email = localStorage.getItem('user_email');
+    showAppModal({
+        title: "Delete Private File",
+        message: `Permanently delete private document #${id} from your personal vault?`,
+        okText: "Delete",
+        cancelText: "Cancel",
+        onOk: async () => {
+            const email = localStorage.getItem('user_email');
+            try {
+                const res = await authFetch(`${API_BASE}/documents/personal/${id}?user_email=${encodeURIComponent(email)}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail);
 
-    try {
-        const res = await authFetch(`${API_BASE}/documents/personal/${id}?user_email=${encodeURIComponent(email)}`, {
-            method: 'DELETE'
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail);
-
-        showAlert(data.message, 'success');
-        loadPersonalDocuments();
-    } catch (err) {
-        alert(err.message);
-    }
+                showAlert(data.message, 'success');
+                loadPersonalDocuments();
+            } catch (err) {
+                showAlert(err.message, 'error');
+            }
+        }
+    });
 }

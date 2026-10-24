@@ -202,6 +202,19 @@ def init_db(override_conn=None):
         );
     """)
 
+    # 7. OTP Verifications Table (Supports 5-minute expiry for Login 2FA and Forgot Password)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS otps (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            otp TEXT NOT NULL,
+            purpose TEXT NOT NULL, -- 'LOGIN' or 'RESET_PASSWORD'
+            expires_at INTEGER NOT NULL,
+            used INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+
     # Database Performance Indexes
     indexes = [
         "CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);",
