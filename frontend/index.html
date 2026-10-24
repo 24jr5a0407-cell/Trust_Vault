@@ -3,123 +3,437 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trust Vault - Enterprise Authentication</title>
+    <title>Trust Vault — Zero-Trust Data & Document Privacy Vault</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Skyflow-Inspired High-Tech Privacy Vault Theme */
+        .landing-hero {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px 60px 20px;
+            text-align: center;
+        }
+        .sky-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: rgba(37, 99, 235, 0.08);
+            border: 1px solid rgba(37, 99, 235, 0.22);
+            border-radius: 9999px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #1d4ed8;
+            margin-bottom: 24px;
+            letter-spacing: 0.02em;
+        }
+        .sky-hero-title {
+            font-size: clamp(2.3rem, 5vw, 3.8rem);
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -0.04em;
+            color: #0f172a;
+            max-width: 900px;
+            margin: 0 auto 20px auto;
+        }
+        .sky-hero-title span {
+            background: linear-gradient(135deg, #1d4ed8 0%, #06b6d4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .sky-hero-desc {
+            font-size: clamp(1.05rem, 2vw, 1.25rem);
+            color: #475569;
+            max-width: 720px;
+            margin: 0 auto 36px auto;
+            line-height: 1.6;
+        }
+        .sky-cta-group {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-bottom: 50px;
+        }
+        
+        /* Architecture Flow Diagram Container */
+        .sky-architecture-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            padding: 36px 24px;
+            box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.08);
+            margin: 40px auto;
+            max-width: 1040px;
+        }
+        
+        .flow-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            align-items: center;
+            margin-top: 30px;
+            position: relative;
+        }
+
+        .flow-node {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 24px 18px;
+            text-align: center;
+            transition: all 0.25s ease;
+            position: relative;
+        }
+        .flow-node:hover {
+            transform: translateY(-3px);
+            border-color: #2563eb;
+            box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.12);
+        }
+        .flow-node-vault {
+            background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+            border: 1px solid #334155;
+            color: #ffffff;
+            box-shadow: 0 16px 32px -4px rgba(15, 23, 42, 0.25);
+        }
+        .flow-node-vault p {
+            color: #94a3b8;
+        }
+        .flow-node-icon {
+            font-size: 2rem;
+            margin-bottom: 12px;
+            display: inline-block;
+        }
+
+        /* Bento Grid Capabilities */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+            gap: 24px;
+            max-width: 1140px;
+            margin: 60px auto;
+            padding: 0 16px;
+        }
+        .bento-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 32px 28px;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+            transition: all 0.25s ease;
+            text-align: left;
+        }
+        .bento-card:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 14px 28px -4px rgba(15, 23, 42, 0.08);
+            transform: translateY(-2px);
+        }
+        .bento-icon-wrapper {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        /* Interactive Authentication Gateway Modal/Card */
+        #authPortalCard {
+            scroll-margin-top: 40px;
+        }
+    </style>
 </head>
 <body>
-    <div class="container" style="max-width: 520px;">
-        <h1 style="text-align: center;">🔒 Trust Vault</h1>
-        <p style="text-align: center; color: var(--text-muted); margin-bottom: 25px;">Enterprise Zero-Leak Document Vault & Audit Matrix</p>
 
-        <div id="alertBox"></div>
-
-        <!-- TABS -->
-        <div class="tab-bar-scrollable" style="display: flex; margin-bottom: 20px; border-bottom: 2px solid var(--border-color);">
-            <button onclick="switchTab('login')" id="tabLogin" style="flex: 1; background: none; color: var(--text-main); border-bottom: 2px solid var(--primary); border-radius: 0;">Sign In (2FA)</button>
-            <button onclick="switchTab('register')" id="tabRegister" style="flex: 1; background: none; color: var(--text-muted); border-radius: 0;">Register</button>
-            <button onclick="switchTab('request')" id="tabRequest" style="flex: 1; background: none; color: var(--text-muted); border-radius: 0;">Request Access</button>
+    <!-- 1. EXECUTIVE SKYFLOW-STYLE HEADER -->
+    <header style="max-width: 1140px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 18px 20px; border-bottom: 1px solid var(--border-light);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #1d4ed8, #06b6d4); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; font-weight: bold; box-shadow: 0 2px 8px rgba(29, 78, 216, 0.3);">
+                🔒
+            </div>
+            <div>
+                <span style="font-weight: 800; font-size: 1.25rem; letter-spacing: -0.02em; color: #0f172a;">Trust Vault</span>
+                <span style="font-size: 0.72rem; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 9999px; margin-left: 6px; font-weight: 700;">ENTERPRISE</span>
+            </div>
         </div>
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <a href="#authPortalCard" onclick="switchTab('login')" class="btn-secondary" style="text-decoration: none; padding: 8px 16px; border-radius: 8px; font-size: 0.88rem; font-weight: 600;">Sign In (2FA)</a>
+            <a href="#authPortalCard" onclick="switchTab('request')" style="text-decoration: none; background: #1d4ed8; color: white; padding: 8px 18px; border-radius: 8px; font-size: 0.88rem; font-weight: 600; box-shadow: 0 2px 6px rgba(29, 78, 216, 0.25);">Request Access</a>
+        </div>
+    </header>
 
-        <!-- 1. LOGIN FORM WITH 2FA OTP -->
-        <div id="formLogin">
-            <h3>Sign In to Your Vault</h3>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Enter your credentials, receive a 5-minute security OTP via email, and verify to enter.</p>
-            
-            <div class="form-group">
-                <label>Email Address</label>
-                <input type="email" id="loginEmail" placeholder="name@company.com">
+    <!-- 2. HERO SECTION -->
+    <section class="landing-hero">
+        <div class="sky-badge">
+            <span>🛡️</span> Zero-Trust Data & Document Privacy Vault
+        </div>
+        <h1 class="sky-hero-title">
+            The Safest Place for <span>Confidential Documents</span> & Sensitive Records
+        </h1>
+        <p class="sky-hero-desc">
+            Isolate, inspect, and govern sensitive corporate documents and personal files with deep binary magic-byte inspection, cryptographic 2FA verification, and immutable non-repudiation audit trails.
+        </p>
+        <div class="sky-cta-group">
+            <a href="#authPortalCard" onclick="switchTab('login')" style="text-decoration: none; background: #1d4ed8; color: white; height: 46px; padding: 0 26px; border-radius: 10px; font-size: 0.96rem; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(29, 78, 216, 0.35);">
+                Enter Secure Vault ➔
+            </a>
+            <a href="#skyflowArchitecture" class="btn-secondary" style="text-decoration: none; height: 46px; padding: 0 22px; border-radius: 10px; font-size: 0.94rem; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+                View Architecture Flow
+            </a>
+        </div>
+    </section>
+
+    <!-- 3. SKYFLOW-STYLE ARCHITECTURE DIAGRAM -->
+    <section id="skyflowArchitecture" style="max-width: 1140px; margin: 0 auto; padding: 0 16px;">
+        <div class="sky-architecture-card">
+            <div style="text-align: center; max-width: 650px; margin: 0 auto;">
+                <span style="font-size: 0.78rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.08em; color: #2563eb;">Architectural Workflow</span>
+                <h2 style="margin-top: 6px; font-size: 1.6rem;">How Trust Vault Protects Sensitive Data</h2>
+                <p style="font-size: 0.92rem; color: #64748b;">A zero-trust perimeter isolating raw binaries and records from unauthorized access and data exfiltration.</p>
             </div>
-            <div class="form-group">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <label style="margin-bottom: 0;">Password</label>
-                    <a href="javascript:void(0)" onclick="switchTab('forgot')" style="font-size: 0.82rem; color: var(--primary); font-weight: 500; text-decoration: none;">Forgot password?</a>
+
+            <!-- Flow Diagram Visualization -->
+            <div class="flow-grid">
+                <!-- Step 1: User Client -->
+                <div class="flow-node">
+                    <span class="flow-node-icon">👤</span>
+                    <h4 style="margin-bottom: 6px; font-size: 1rem; color: #0f172a;">1. Authenticated User</h4>
+                    <p style="font-size: 0.82rem; color: #64748b; line-height: 1.4;">2FA OTP verification via email. Requests granular read-only access to files.</p>
                 </div>
-                <input type="password" id="loginPassword" placeholder="••••••••••••" style="margin-top: 6px;">
+
+                <!-- Step 2: Zero-Trust Gateway -->
+                <div class="flow-node">
+                    <span class="flow-node-icon">🛡️</span>
+                    <h4 style="margin-bottom: 6px; font-size: 1rem; color: #0f172a;">2. Security Gateway</h4>
+                    <p style="font-size: 0.82rem; color: #64748b; line-height: 1.4;">Magic-byte validation (%PDF-, \x89PNG). WebShell, executable & script scanner.</p>
+                </div>
+
+                <!-- Step 3: Isolated Privacy Vault Core -->
+                <div class="flow-node flow-node-vault">
+                    <span class="flow-node-icon">🔒</span>
+                    <h4 style="margin-bottom: 6px; font-size: 1rem; color: #ffffff;">3. Trust Vault Core</h4>
+                    <p style="font-size: 0.82rem; line-height: 1.4;">Turso libSQL distributed database + Backblaze B2 encrypted object storage.</p>
+                </div>
+
+                <!-- Step 4: Zero-Leak In-Memory Inspection -->
+                <div class="flow-node">
+                    <span class="flow-node-icon">👁️</span>
+                    <h4 style="margin-bottom: 6px; font-size: 1rem; color: #0f172a;">4. In-Memory Preview</h4>
+                    <p style="font-size: 0.82rem; color: #64748b; line-height: 1.4;">Direct downloads blocked. Ephemeral HTML5 canvas and blob rendering in sandbox.</p>
+                </div>
             </div>
 
-            <!-- STEP 1: REQUEST OTP BUTTON -->
-            <div id="loginOtpRequestSection" style="margin-bottom: 15px;">
-                <button type="button" id="btnRequestLoginOtp" onclick="handleSendLoginOtp()" style="width: 100%; background: #0284c7;">
-                    📧 Send 5-Min Login OTP to My Email
-                </button>
+            <!-- Flow Bottom Status -->
+            <div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-around; flex-wrap: wrap; gap: 16px; text-align: center;">
+                <div>
+                    <strong style="color: #059669; font-size: 0.95rem;">✓ Zero Download Exfiltration</strong>
+                    <div style="font-size: 0.78rem; color: #64748b;">Read-only in-memory render</div>
+                </div>
+                <div>
+                    <strong style="color: #2563eb; font-size: 0.95rem;">✓ Append-Only Audit Matrix</strong>
+                    <div style="font-size: 0.78rem; color: #64748b;">Immutable ledger logs</div>
+                </div>
+                <div>
+                    <strong style="color: #059669; font-size: 0.95rem;">✓ Dual-Tier Access Control</strong>
+                    <div style="font-size: 0.78rem; color: #64748b;">Platform Whitelist + Doc RBAC</div>
+                </div>
             </div>
+        </div>
+    </section>
 
-            <!-- STEP 2: OTP INPUT -->
-            <div id="loginOtpInputSection" style="display: none; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px dashed var(--primary); margin-bottom: 15px;">
-                <label style="color: var(--primary);">Enter 6-Digit Email OTP (Valid for 5 Min)</label>
-                <input type="text" id="loginOtp" placeholder="123456" maxlength="6" style="font-size: 1.2rem; letter-spacing: 4px; text-align: center; font-weight: bold; margin-bottom: 10px;">
-                <button type="button" onclick="handleLogin()" style="width: 100%;">Verify OTP & Complete Sign In</button>
-                <p style="font-size: 0.78rem; text-align: center; color: var(--text-muted); margin-top: 8px;">
-                    Didn't receive it? <a href="javascript:void(0)" onclick="handleSendLoginOtp()" style="color: var(--primary); text-decoration: underline;">Resend OTP</a>
+    <!-- 4. SKYFLOW-STYLE CAPABILITY BENTO GRID -->
+    <section style="max-width: 1140px; margin: 40px auto 20px auto; text-align: center; padding: 0 16px;">
+        <span style="font-size: 0.78rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.08em; color: #2563eb;">Enterprise Features</span>
+        <h2 style="font-size: 1.8rem; margin-top: 6px; color: #0f172a;">Engineered for Compliance and Zero-Leak Privacy</h2>
+        <p style="font-size: 0.96rem; color: #64748b; max-width: 600px; margin: 0 auto;">Everything required to govern sensitive corporate assets in high-concurrency environments.</p>
+
+        <div class="bento-grid">
+            <div class="bento-card">
+                <div class="bento-icon-wrapper">🔐</div>
+                <h3 style="font-size: 1.15rem; margin-bottom: 8px;">Two-Factor Authentication (2FA)</h3>
+                <p style="font-size: 0.9rem; color: #64748b; line-height: 1.5;">
+                    Zero-leak OTP verification. 6-digit cryptographic verification codes sent out-of-band via SSL Port 465, expiring in 300 seconds.
                 </p>
             </div>
 
-            <div style="text-align: center; margin-top: 15px;">
-                <span style="font-size: 0.85rem; color: var(--text-muted);">Don't have access?</span>
-                <a href="javascript:void(0)" onclick="switchTab('request')" style="font-size: 0.85rem; color: var(--primary); text-decoration: none; margin-left: 4px;">Request Access</a>
+            <div class="bento-card">
+                <div class="bento-icon-wrapper">🛡️</div>
+                <h3 style="font-size: 1.15rem; margin-bottom: 8px;">Deep Magic-Byte Security</h3>
+                <p style="font-size: 0.9rem; color: #64748b; line-height: 1.5;">
+                    Never relies on file extensions alone. Deep binary header inspection blocks extension spoofing, Windows MZ executables, Linux ELFs, and webshells.
+                </p>
+            </div>
+
+            <div class="bento-card">
+                <div class="bento-icon-wrapper">📜</div>
+                <h3 style="font-size: 1.15rem; margin-bottom: 8px;">Immutable Audit Ledger</h3>
+                <p style="font-size: 0.9rem; color: #64748b; line-height: 1.5;">
+                    Strictly append-only compliance logging. Every view, upload, approval, and revocation is permanently timestamped with CSV compliance exports.
+                </p>
+            </div>
+
+            <div class="bento-card">
+                <div class="bento-icon-wrapper">🔒</div>
+                <h3 style="font-size: 1.15rem; margin-bottom: 8px;">Private Personal Vaults</h3>
+                <p style="font-size: 0.9rem; color: #64748b; line-height: 1.5;">
+                    Zero-knowledge personal storage. Personal documents are completely isolated from administrative views and require no admin authorization to delete.
+                </p>
+            </div>
+
+            <div class="bento-card">
+                <div class="bento-icon-wrapper">🖼️</div>
+                <h3 style="font-size: 1.15rem; margin-bottom: 8px;">Multi-Format In-Memory Viewer</h3>
+                <p style="font-size: 0.9rem; color: #64748b; line-height: 1.5;">
+                    Preview PDFs, images (PNG, JPG, WebP), and text/CSV records in an ephemeral browser sandbox with context-menu copying and downloads prohibited.
+                </p>
+            </div>
+
+            <div class="bento-card">
+                <div class="bento-icon-wrapper">⚡</div>
+                <h3 style="font-size: 1.15rem; margin-bottom: 8px;">Serverless $0 Cost Scale</h3>
+                <p style="font-size: 0.9rem; color: #64748b; line-height: 1.5;">
+                    Engineered with high-concurrency cloud primitives: Vercel Edge Serverless, Turso distributed libSQL, and Backblaze B2 S3 storage.
+                </p>
             </div>
         </div>
+    </section>
 
-        <!-- 2. REGISTER FORM -->
-        <div id="formRegister" style="display: none;">
-            <h3>Create Account (Approved Whitelist Only)</h3>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Use the confidential secure code dispatched to your email after admin approval.</p>
-            <div class="form-group">
-                <label>Approved Email</label>
-                <input type="email" id="regEmail" placeholder="Your approved email">
-            </div>
-            <div class="form-group">
-                <label>Secure Registration Code</label>
-                <input type="text" id="regCode" placeholder="e.g., TV-A1B2C3">
-            </div>
-            <div class="form-group">
-                <label>Set Password</label>
-                <input type="password" id="regPassword" placeholder="Choose a strong password (min 6 chars)">
-            </div>
-            <button onclick="handleRegister()" style="width: 100%;">Create Account</button>
-        </div>
-
-        <!-- 3. REQUEST ACCESS FORM -->
-        <div id="formRequest" style="display: none;">
-            <h3>Request Whitelist Entry</h3>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">New users must submit their email for administrator authorization. Upon approval, your registration security code will be sent to your email.</p>
-            <div class="form-group">
-                <label>Your Email Address</label>
-                <input type="email" id="reqEmail" placeholder="name@company.com">
-            </div>
-            <button onclick="handleRequestAccess()" style="width: 100%;">Submit Request</button>
-        </div>
-
-        <!-- 4. FORGOT PASSWORD WITH 5-MIN OTP -->
-        <div id="formForgot" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0;">Reset Forgotten Password</h3>
-                <a href="javascript:void(0)" onclick="switchTab('login')" style="font-size: 0.85rem; color: var(--primary); text-decoration: none;">← Back to Sign In</a>
-            </div>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Enter your registered email to receive a 5-minute one-time verification password reset code.</p>
-
-            <div id="forgotStep1">
-                <div class="form-group">
-                    <label>Registered Email Address</label>
-                    <input type="email" id="forgotEmail" placeholder="name@example.com">
+    <!-- 5. INTERACTIVE AUTHENTICATION GATEWAY (PORTAL) -->
+    <section id="authPortalCard" style="max-width: 540px; margin: 40px auto 60px auto; padding: 0 16px;">
+        <div class="container" style="padding: 32px 28px;">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div style="width: 44px; height: 44px; background: #eff6ff; color: #1d4ed8; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.4rem; margin-bottom: 12px;">
+                    🛡️
                 </div>
-                <button type="button" id="btnSendForgotOtp" onclick="handleSendForgotOtp()" style="width: 100%;">Send Password Reset OTP</button>
+                <h2 style="font-size: 1.45rem; margin-bottom: 4px;">Access Trust Vault</h2>
+                <p style="font-size: 0.88rem; color: var(--text-muted);">Select your authorization path to proceed</p>
             </div>
 
-            <div id="forgotStep2" style="display: none; margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color);">
-                <div class="form-group">
-                    <label>6-Digit Reset Code (From Email)</label>
-                    <input type="text" id="resetOtp" placeholder="123456" maxlength="6" style="font-size: 1.1rem; letter-spacing: 3px; text-align: center; font-weight: bold;">
-                </div>
-                <div class="form-group">
-                    <label>New Password (min 6 chars)</label>
-                    <input type="password" id="newPassword" placeholder="••••••••••••">
-                </div>
-                <button type="button" onclick="handleResetPassword()" style="width: 100%; background: #22c55e;">Change Password</button>
+            <div id="alertBox"></div>
+
+            <!-- TABS (Segmented Control) -->
+            <div class="tab-bar-scrollable" style="display: flex; margin-bottom: 22px;">
+                <button onclick="switchTab('login')" id="tabLogin" style="flex: 1;">Sign In (2FA)</button>
+                <button onclick="switchTab('register')" id="tabRegister" style="flex: 1;">Register</button>
+                <button onclick="switchTab('request')" id="tabRequest" style="flex: 1;">Request Access</button>
             </div>
+
+            <!-- 1. LOGIN FORM WITH 2FA OTP -->
+            <div id="formLogin">
+                <h3 style="font-size: 1.1rem; margin-bottom: 6px;">Sign In to Your Vault</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 18px;">Enter your credentials, receive a 5-minute security OTP via email, and verify to enter.</p>
+                
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="loginEmail" placeholder="name@company.com">
+                </div>
+                <div class="form-group">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label style="margin-bottom: 0;">Password</label>
+                        <a href="javascript:void(0)" onclick="switchTab('forgot')" style="font-size: 0.82rem; color: var(--primary); font-weight: 600; text-decoration: none;">Forgot password?</a>
+                    </div>
+                    <input type="password" id="loginPassword" placeholder="••••••••••••" style="margin-top: 6px;">
+                </div>
+
+                <!-- STEP 1: REQUEST OTP BUTTON -->
+                <div id="loginOtpRequestSection" style="margin-bottom: 16px;">
+                    <button type="button" id="btnRequestLoginOtp" onclick="handleSendLoginOtp()" style="width: 100%; background: #0284c7;">
+                        📧 Send 5-Min Login OTP to My Email
+                    </button>
+                </div>
+
+                <!-- STEP 2: OTP INPUT -->
+                <div id="loginOtpInputSection" style="display: none; background: #f8fafc; padding: 18px; border-radius: 12px; border: 1px dashed var(--brand-primary); margin-bottom: 16px;">
+                    <label style="color: var(--brand-primary); font-weight: 700;">Enter 6-Digit Email OTP (Valid for 5 Min)</label>
+                    <input type="text" id="loginOtp" placeholder="123456" maxlength="6" style="font-size: 1.3rem; letter-spacing: 5px; text-align: center; font-weight: bold; margin-bottom: 12px; height: 48px;">
+                    <button type="button" onclick="handleLogin()" style="width: 100%; height: 44px;">Verify OTP & Complete Sign In</button>
+                    <p style="font-size: 0.80rem; text-align: center; color: var(--text-muted); margin-top: 10px;">
+                        Didn't receive it? <a href="javascript:void(0)" onclick="handleSendLoginOtp()" style="color: var(--primary); font-weight: 600; text-decoration: underline;">Resend OTP</a>
+                    </p>
+                </div>
+
+                <div style="text-align: center; margin-top: 18px;">
+                    <span style="font-size: 0.85rem; color: var(--text-muted);">Don't have access?</span>
+                    <a href="javascript:void(0)" onclick="switchTab('request')" style="font-size: 0.85rem; color: var(--primary); font-weight: 600; text-decoration: none; margin-left: 4px;">Request Access</a>
+                </div>
+            </div>
+
+            <!-- 2. REGISTER FORM -->
+            <div id="formRegister" style="display: none;">
+                <h3 style="font-size: 1.1rem; margin-bottom: 6px;">Create Account (Approved Whitelist Only)</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 18px;">Use the confidential secure code dispatched to your email after admin approval.</p>
+                <div class="form-group">
+                    <label>Approved Email</label>
+                    <input type="email" id="regEmail" placeholder="Your approved email">
+                </div>
+                <div class="form-group">
+                    <label>Secure Registration Code</label>
+                    <input type="text" id="regCode" placeholder="e.g., TV-A1B2C3">
+                </div>
+                <div class="form-group">
+                    <label>Set Password</label>
+                    <input type="password" id="regPassword" placeholder="Choose a strong password (min 6 chars)">
+                </div>
+                <button onclick="handleRegister()" style="width: 100%; height: 44px;">Create Account</button>
+            </div>
+
+            <!-- 3. REQUEST ACCESS FORM -->
+            <div id="formRequest" style="display: none;">
+                <h3 style="font-size: 1.1rem; margin-bottom: 6px;">Request Whitelist Entry</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 18px;">New users must submit their email for administrator authorization. Upon approval, your registration security code will be sent to your email.</p>
+                <div class="form-group">
+                    <label>Your Email Address</label>
+                    <input type="email" id="reqEmail" placeholder="name@company.com">
+                </div>
+                <button onclick="handleRequestAccess()" style="width: 100%; height: 44px;">Submit Access Request</button>
+            </div>
+
+            <!-- 4. FORGOT PASSWORD WITH 5-MIN OTP -->
+            <div id="formForgot" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin: 0; font-size: 1.1rem;">Reset Forgotten Password</h3>
+                    <a href="javascript:void(0)" onclick="switchTab('login')" style="font-size: 0.84rem; color: var(--primary); font-weight: 600; text-decoration: none;">← Back to Sign In</a>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 18px;">Enter your registered email to receive a 5-minute one-time verification password reset code.</p>
+
+                <div id="forgotStep1">
+                    <div class="form-group">
+                        <label>Registered Email Address</label>
+                        <input type="email" id="forgotEmail" placeholder="name@example.com">
+                    </div>
+                    <button type="button" id="btnSendForgotOtp" onclick="handleSendForgotOtp()" style="width: 100%; height: 44px;">Send Password Reset OTP</button>
+                </div>
+
+                <div id="forgotStep2" style="display: none; margin-top: 15px; background: #f8fafc; padding: 18px; border-radius: 12px; border: 1px solid var(--border-light);">
+                    <div class="form-group">
+                        <label>6-Digit Reset Code (From Email)</label>
+                        <input type="text" id="resetOtp" placeholder="123456" maxlength="6" style="font-size: 1.2rem; letter-spacing: 4px; text-align: center; font-weight: bold; height: 44px;">
+                    </div>
+                    <div class="form-group">
+                        <label>New Password (min 6 chars)</label>
+                        <input type="password" id="newPassword" placeholder="••••••••••••">
+                    </div>
+                    <button type="button" onclick="handleResetPassword()" style="width: 100%; background: #059669; height: 44px;">Change Password</button>
+                </div>
+            </div>
+
         </div>
+    </section>
 
-    </div>
+    <!-- 6. FOOTER -->
+    <footer style="max-width: 1140px; margin: 40px auto 20px auto; padding: 24px 20px; border-top: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; font-size: 0.86rem; color: #64748b;">
+        <div>
+            🔒 <strong>Trust Vault</strong> — Enterprise Data Privacy & Document Protection
+        </div>
+        <div>
+            Zero-Trust Cloud Architecture &copy; 2026. Built with FastAPI &amp; libSQL.
+        </div>
+    </footer>
 
     <!-- GLOBAL CONFIRMATION / NOTICE MODAL -->
     <div id="appModal" class="custom-modal-backdrop" style="display: none;">
