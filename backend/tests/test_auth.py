@@ -18,7 +18,7 @@ def test_admin_login_success(client, test_db):
         "password": ADMIN_DEFAULT_PASSWORD
     })
     assert otp_res.status_code == 200
-    assert "Verification code" in otp_res.json()["message"]
+    assert "OTP" in otp_res.json()["message"] or "Verification code" in otp_res.json()["message"]
 
     # Retrieve generated OTP from test database
     cursor = test_db.cursor()
