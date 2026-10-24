@@ -42,7 +42,10 @@ ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "guardfile@gmail.com")
 ADMIN_DEFAULT_PASSWORD = os.getenv("ADMIN_DEFAULT_PASSWORD", "Arshad@1234")
 ADMIN_MASTER_CODE = os.getenv("ADMIN_MASTER_CODE", "ADMIN-MASTER-KEY")
 
-# SMTP Email Configuration
+# Email Configuration (Resend HTTP API + SMTP Fallback)
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip()
+RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev").strip()
+
 SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com").strip()
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "").strip()
