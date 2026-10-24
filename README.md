@@ -1,148 +1,151 @@
-# 🛡️ Trust Vault — Enterprise Cloud Document Vault & Security System
+# 🔒 Trust Vault — Enterprise Cloud Document Vault & Security System
 
 [![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Production%20Ready-009688.svg)](https://fastapi.tiangolo.com/)
 [![Database](https://img.shields.io/badge/Database-Turso%20libSQL-00eb84.svg)](https://turso.tech/)
 [![Storage](https://img.shields.io/badge/Object%20Storage-Backblaze%20B2%20(S3)-red.svg)](https://www.backblaze.com/b2/)
 [![Tests](https://img.shields.io/badge/Tests-19%20Passed%20(100%25)-brightgreen.svg)](https://docs.pytest.org/)
+[![Deployment](https://img.shields.io/badge/Vercel-Live%20Production-black.svg)](https://trust-vault-gamma.vercel.app)
 [![License](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 
-An enterprise-grade, cloud-native secure document management platform featuring **Role-Based Access Control (RBAC)**, **Zero-Trust Whitelist Onboarding**, **Multi-Layered Binary Magic-Byte Security**, **File-Manager Multi-Criteria Search**, and an **Immutable Audit Ledger**.
+An enterprise-grade, cloud-native secure document management platform featuring **Two-Factor Authentication (2FA OTP)**, **Role-Based Access Control (RBAC)**, **Zero-Trust Whitelist Onboarding**, **Multi-Layered Binary Magic-Byte Security**, **Zero-Leak In-Browser Document Inspection**, and an **Immutable Audit Ledger**.
 
-Designed for high-concurrency cloud environments (handling 100+ concurrent users + administrator) with zero server maintenance costs using serverless cloud primitives.
+Designed for high-concurrency cloud environments (100+ concurrent users + administrator) with zero server maintenance costs using serverless primitives.
+
+---
+
+## 🌐 Live Production Application
+* **Live URL**: [https://trust-vault-gamma.vercel.app](https://trust-vault-gamma.vercel.app)
+* **GitHub Repository**: [https://github.com/24jr5a0407-cell/Trust_Vault](https://github.com/24jr5a0407-cell/Trust_Vault)
+* **Master Admin Credentials**:
+  - Email: `guardfilespace@gmail.com`
+  - Password: `Arshad@1234`
+  - 2FA OTP: Dispatched to `guardfilespace@gmail.com` upon login request (valid for 5 minutes).
 
 ---
 
 ## 🏛️ System Architecture
 
 ```
-[ Web Browser / Client UI ]
-           │  HTTPS / JWT Bearer
-           ▼
+[ Modern Web Browser / Mobile Responsive UI ]
+                     │  HTTPS / JWT Bearer
+                     ▼
 [ Vercel Edge Serverless / Cloud Application Layer ]
-           │
-           ├──► [ Enterprise JWT & RBAC Engine (Stateless Authentication) ]
-           │
-           ├──► [ Multi-Layer File Security & Magic-Byte Validator ]
-           │        ├── Filename Sanitization & Traversal Blocker
-           │        ├── Binary Signature Validator (%PDF-, \x89PNG, \xff\xd8\xff, PK\x03\x04)
-           │        ├── WebShell & Executable Payload Scanner (MZ, ELF, PHP, Eval)
-           │        └── Double-Extension Blocker
-           │
-           ├──► [ Turso Cloud libSQL / Distributed SQLite Engine ]
-           │        └── Pipelined HTTP, Connection Pooling, Foreign Key Enforcement
-           │
-           └──► [ Backblaze B2 S3-Compatible Object Storage ]
-                    └── Direct Memory Streaming (Official & User-Scoped Folders)
+                     │
+     ┌───────────────┼──────────────────────────────┐
+     │               │                              │
+     ▼               ▼                              ▼
+[ 2FA & RBAC ]  [ Triple-Layer Validator ]   [ Out-of-Band Email Relay ]
+Stateless JWT   Magic-Byte Inspection         Port 465 SSL SMTP Relay
+Role Guards     WebShell/MZ/ELF Scanner       5-Min Single-Use OTPs
+                     │                              │
+     ┌───────────────┴──────────────────────────────┘
+     ▼
+[ Cloud Infrastructure Layer ]
+     ├──► Turso libSQL: Distributed Cloud Database (Pipelined HTTP, Foreign Keys)
+     └──► Backblaze B2: S3-Compatible Encrypted Cloud Object Storage
 ```
 
 ---
 
-## ✨ Key Enterprise Capabilities
+## 💡 System Strengths: Technical & Logical Highlights
 
-### 1. 🔐 Dual-Tier Security & Access Governance
-- **Tier 1 (Platform Onboarding Whitelist)**: Visitors cannot register without administrator approval. Admin generates cryptographic secure codes (`TV-XXXXXX`) to authorize employee registration.
-- **Tier 2 (Per-File Document Permissions)**: Users request access to specific documents in the catalog. Document owners and administrators review, approve, reject, or revoke read permissions individually.
+### 1. Logical Strengths (Business & Access Governance)
+* **Dual-Tier Access Governance**:
+  - *Tier 1 (Platform Whitelist)*: Public visitors cannot create an account without administrator approval. Upon admin approval, a single-use registration key (`TV-XXXXXX`) is automatically emailed to the applicant.
+  - *Tier 2 (Per-Document Granular Permissions)*: Approved users only see documents they own or have been specifically granted permission to inspect. Document owners and admins review access requests with one-click approvals or revocations.
+* **Zero-Leak Data Loss Prevention (DLP)**:
+  - Direct file downloading is permanently blocked for non-owners.
+  - Documents are rendered strictly in-memory using PDF.js `<canvas>` sandboxes and memory object URLs. Right-click context menus, text selection, and drag-and-drop file saves are disabled.
+* **Non-Repudiation Audit Matrix**:
+  - Every file upload, preview inspection, download, and deletion is recorded in an **append-only** audit ledger (`document_logs`).
+  - No user or admin can alter or delete audit history through the API. Compliance exports are available as downloadable CSV files.
 
-### 2. 🛡️ Deep Binary Magic-Byte & Malware Validation
-- Does **not** rely on file extensions alone (prevents extension spoofing like `malware.exe` renamed to `contract.pdf`).
-- Inspects binary headers at byte level for PDF, PNG, JPEG, WebP, and Office OpenXML documents.
-- Scans for embedded webshells (`<?php`, `eval(`, `base64_decode(`), XSS scripts (`<script>`), and Windows/Linux executable binaries (`MZ`, `ELF`).
-- Rejects dangerous double-extensions (e.g. `invoice.pdf.exe`).
-
-### 3. 🔍 File-Manager Search Engine
-- Search by **Document ID** (`#4`, `#12`).
-- Search by **Full Filename** or **Half / Partial Name** (case-insensitive substring match).
-- Search by **Owner Name / Email** (e.g. `alice`, `admin`, `@company.com`).
-- Instant client-side debounced filtering with live database synchronization.
-
-### 4. 🔒 Zero-Trust File Protection & Audit Ledger
-- **Private Personal Vault**: User-scoped confidential storage completely inaccessible to other users or administrators.
-- **Watermarked In-Browser Preview**: Rendered securely on canvas without revealing direct storage paths.
-- **Immutable Ledger**: Every view, download, rename, grant, or deletion is recorded with an immutable timestamp and actor email.
+### 2. Technical Strengths (Engineering & Performance)
+* **Triple-Layer Binary Magic-Byte Security**:
+  - File extension checking is treated as untrusted metadata. The backend inspects leading file headers at the binary level (`%PDF-`, `\x89PNG`, `\xff\xd8\xff`, `PK\x03\x04`).
+  - Deep scanning blocks Windows PE binaries (`MZ`), Linux ELF binaries (`\x7fELF`), and embedded script tags (`<?php`, `<script>`, `eval(`, `powershell -`). Double extensions (`file.pdf.exe`) are blocked immediately.
+* **Resilient Out-of-Band Multi-Transport Email Relay**:
+  - High-priority Port 465 implicit SSL SMTP relay through `smtp.gmail.com` delivers OTPs and security codes to any recipient worldwide without sandbox limitations.
+* **Serverless Cost Efficiency ($0 Running Cost)**:
+  - Fully leverages cloud serverless primitives: Vercel Edge Serverless + Turso Distributed SQLite + Backblaze B2 S3 storage + Gmail SMTP. 100% cloud-native architecture with zero server maintenance overhead.
+* **Sub-Second Parallel Client Loading**:
+  - Frontend dashboard utilizes `Promise.allSettled()` to fetch user documents, catalog requests, personal files, and incoming reviews in parallel, eliminating sequential network blocking.
 
 ---
 
-## 🚀 Technology Stack
+## 📂 Repository Security & Verification Documents
 
-| Component | Technology | Rationale |
-| :--- | :--- | :--- |
-| **Backend Framework** | [FastAPI](https://fastapi.tiangolo.com/) | High-performance asynchronous Python API with automatic OpenAPI documentation. |
-| **Cloud Database** | [Turso](https://turso.tech/) (libSQL) | Distributed SQLite over HTTP with sub-30ms latency, zero lock contention, and WAL mode. |
-| **Cloud Object Storage** | [Backblaze B2](https://www.backblaze.com/b2/) | Enterprise S3-compatible cloud bucket for high-speed multi-part file streaming. |
-| **Authentication** | HMAC-SHA256 JWT | Stateless token verification with zero database query overhead. |
-| **Frontend** | Vanilla JS / HTML5 / CSS3 / PDF.js | Zero-build client optimized for instantaneous page loads and low bandwidth consumption. |
-| **Automated Testing** | Pytest & HTTPX | Full integration and security test suite covering 100% of critical paths. |
+Alongside this codebase, thorough architectural and threat analysis documents are maintained:
+* [**`THREATS.md`**](file:///c:/Users/MD%20ARSHAD/Desktop/Trust_valut_app/Trust_valut/THREATS.md): A comprehensive threat matrix detailing 8 realistic attack vectors (e.g. Broken Access Control, IDOR, Webshells, Screen Exfiltration), their implemented mitigations, and explicit accepted residual risks.
+* [**`PROMPTS.md`**](file:///c:/Users/MD%20ARSHAD/Desktop/Trust_valut_app/Trust_valut/PROMPTS.md): Dated engineering log recording critical architectural decisions, security blunders caught during automated generation, and commit references.
+
+---
+
+## 🚀 Getting Started & Local Setup
+
+### Prerequisites
+* Python 3.11+
+* Git
+
+### Installation
+```bash
+# 1. Clone repository
+git clone https://github.com/24jr5a0407-cell/Trust_Vault.git
+cd Trust_Vault
+
+# 2. Create virtual environment
+python -m venv venv
+# On Windows:
+.\venv\Scripts\activate
+# On Linux/macOS:
+source venv/bin/activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Configure environment variables
+cp .env.example .env
+```
+
+### Running Locally
+```bash
+# Start FastAPI backend server
+cd backend
+python -m uvicorn main:app --reload --port 8000
+```
+Open your browser and navigate to `http://localhost:8000`.
 
 ---
 
 ## 🧪 Automated Test Suite
 
-Trust Vault includes comprehensive automated test coverage (19 passing unit, integration, and security tests):
+Trust Vault includes an automated test suite verifying authorization, file security, access controls, and administrative protections:
 
 ```bash
-# Run the complete test suite
+# Run all tests with verbose output
 python -m pytest backend/tests -v
 ```
 
-### Test Coverage Highlights:
-- **`test_auth.py`**: Whitelist submission, secure code validation, duplicate checks, login verification, token generation.
-- **`test_admin.py`**: RBAC permission boundaries (`403 Forbidden` enforcement), admin user listing, ledger CSV exports.
-- **`test_documents.py`**: Document uploads, permission checks, personal document isolation, preview/download access.
-- **`test_file_validation.py`**: Magic-byte verification, spoofed extension detection, webshell blocking, empty file rejection, double-extension prevention.
-- **`test_requests.py`**: Full request lifecycle (request access, approve, grant access, revoke access).
+### Test Coverage Breakdown
+* `test_admin.py`: RBAC route protection, non-admin 403 Forbidden checks, primary administrator delete prevention.
+* `test_auth.py`: 2FA login verification, invalid password rejection, whitelist onboarding lifecycle.
+* `test_documents.py`: File upload, catalog search, preview authorization, and private vault data isolation.
+* `test_file_validation.py`: Magic-byte validation, extension spoofing rejection, malicious webshell detection, dangerous double-extensions.
+* `test_requests.py`: Document permission request submission, owner approval, and access revocation.
 
 ---
 
-## 🛠️ Local Installation & Development
+## 👥 Roles & Access Matrix
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/24jr5a0407-cell/Trust_Vault.git
-cd Trust_Vault
-```
-
-### 2. Configure Environment Variables
-Copy `.env.example` to `.env` and fill in your credentials:
-```bash
-cp .env.example .env
-```
-
-### 3. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Start the Application
-```bash
-python -m uvicorn backend.main:app --reload --port 8000
-```
-- Web Application: [http://127.0.0.1:8000](http://127.0.0.1:8000)
-- Interactive API Documentation: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-
----
-
-## ☁️ Zero-Cost Production Deployment to Vercel
-
-Trust Vault is configured out-of-the-box for serverless deployment on Vercel:
-
-1. Push this repository to your GitHub account: `https://github.com/24jr5a0407-cell/Trust_Vault`.
-2. Log into [Vercel](https://vercel.com/) with your GitHub account.
-3. Click **Add New Project** and select `Trust_Vault`.
-4. Under **Environment Variables**, add the keys from your `.env` file:
-   - `TURSO_DATABASE_URL`
-   - `TURSO_AUTH_TOKEN`
-   - `B2_BUCKET_NAME`
-   - `B2_KEY_ID`
-   - `B2_APPLICATION_KEY`
-   - `B2_ENDPOINT_URL`
-   - `JWT_SECRET_KEY`
-   - `ADMIN_EMAIL`
-   - `ADMIN_DEFAULT_PASSWORD`
-   - `MAX_UPLOAD_SIZE_MB`
-5. Click **Deploy**. Vercel will automatically build the static frontend and Python serverless API.
-
----
-
-## 📄 License
-Distributed under the MIT License.
+| Feature / Action | Anonymous Visitor | Approved User | Document Owner | Master Administrator |
+| :--- | :---: | :---: | :---: | :---: |
+| Submit Whitelist Request | ✅ | — | — | — |
+| Complete 2FA Login | — | ✅ | ✅ | ✅ |
+| Upload Official Document | — | ✅ | ✅ | ✅ |
+| Preview Accessible Document | — | Restricted | ✅ | ✅ |
+| Direct Download File | — | ❌ (Blocked) | ✅ | ✅ |
+| Manage Private Vault Files | — | Personal Only | Personal Only | Personal Only |
+| Approve / Revoke Document Access | — | ❌ | ✅ (Own Files) | ✅ (All Files) |
+| Onboard Whitelist Users | — | ❌ | ❌ | ✅ |
+| View & Export Audit Ledger | — | ❌ | ❌ | ✅ |
