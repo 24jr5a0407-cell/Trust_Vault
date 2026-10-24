@@ -410,7 +410,7 @@ async function loadAdminRequests() {
         const reqs = await res.json();
 
         tbody.innerHTML = reqs.map(r => {
-            const isAdmin = r.email === 'admin@trustvault.com';
+            const isAdmin = r.email === 'guardfile@gmail.com' || r.secure_code === 'ADMIN-MASTER-KEY';
             const isProcessed = r.status === 'APPROVED' || r.status === 'REJECTED';
 
             let actionHtml = '';
@@ -471,7 +471,7 @@ async function loadAdminUsers() {
                 <td>${u.is_admin ? 'Yes' : 'No'}</td>
                 <td>${new Date(u.created_at).toLocaleString()}</td>
                 <td>
-                    ${u.email !== 'admin@trustvault.com' ? `<button onclick="removeUser('${u.email}')" class="danger" style="padding: 4px 8px; font-size: 0.8rem;">Remove User</button>` : 'Primary Admin'}
+                    ${(u.email !== 'guardfile@gmail.com' && !u.is_admin) ? `<button onclick="removeUser('${u.email}')" class="danger" style="padding: 4px 8px; font-size: 0.8rem;">Remove User</button>` : 'Primary Admin'}
                 </td>
             </tr>
         `).join('');

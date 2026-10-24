@@ -81,7 +81,7 @@ def remove_user(
     if not target:
         raise HTTPException(status_code=404, detail="User not found.")
         
-    if email == current_admin["email"] or email == "admin@trustvault.com":
+    if email == current_admin["email"] or email == "guardfile@gmail.com":
         logger.warning(f"Attempted deletion of primary administrator account '{email}' blocked.")
         raise HTTPException(status_code=400, detail="Cannot remove primary admin account.")
         
