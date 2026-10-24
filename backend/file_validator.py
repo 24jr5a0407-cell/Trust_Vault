@@ -27,16 +27,11 @@ BLOCKED_EXTENSIONS = {
     ".reg", ".wsf", ".hta", ".cpl", ".inf"
 }
 
-# Malicious byte patterns and webshell signatures
+# Malicious script patterns and webshell injection signatures
 DANGEROUS_SIGNATURES = [
-    (b"MZ", "Windows PE executable binary (MZ header)"),
-    (b"\x7fELF", "Linux/UNIX ELF executable binary"),
-    (b"\xca\xfe\xba\xbe", "Compiled Java class file"),
     (b"<?php", "Embedded PHP script"),
     (b"<?=", "Embedded PHP short tag"),
     (b"<script", "Embedded HTML/JavaScript payload"),
-    (b"#!/bin/sh", "Shell script execution header"),
-    (b"#!/bin/bash", "Bash script execution header"),
     (b"powershell -", "PowerShell invocation script"),
     (b"eval(", "Dynamic code execution statement"),
     (b"base64_decode(", "Obfuscated payload decoding function"),
@@ -147,19 +142,33 @@ def scan_for_malicious_payloads(content: bytes, filename: str) -> None:
     """Scans binary content for executable headers and dangerous code snippets."""
     sample = content[:16384].lower()
 
-    # Check for executable headers at byte 0
+    # Check for executable and script headers strictly at byte offset 0
     if content.startswith(b"MZ"):
         logger.warning(f"Security Alert: Blocked executable binary (MZ) disguised as {filename}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Executable binary files (.exe/.dll) are strictly prohibited in Trust Vault."
+            detail="Security scan rejected file: Potentially harmful content detected (Windows PE executable binary (MZ header))."
         )
 
     if content.startswith(b"\x7fELF"):
         logger.warning(f"Security Alert: Blocked ELF executable disguised as {filename}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Linux ELF binary files are strictly prohibited in Trust Vault."
+            detail="Security scan rejected file: Potentially harmful content detected (Linux/UNIX ELF executable binary)."
+        )
+
+    if content.startswith(b"\xca\xfe\xba\xbe"):
+        logger.warning(f"Security Alert: Blocked Java class file disguised as {filename}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Security scan rejected file: Potentially harmful content detected (Compiled Java class file)."
+        )
+
+    if content.startswith(b"#!/bin/sh") or content.startswith(b"#!/bin/bash"):
+        logger.warning(f"Security Alert: Blocked shell script disguised as {filename}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Security scan rejected file: Potentially harmful content detected (Shell script execution header)."
         )
 
     # Scan for malicious webshell and script injection payloads
