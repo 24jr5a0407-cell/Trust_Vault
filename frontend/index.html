@@ -57,105 +57,162 @@
             margin-bottom: 30px;
         }
 
-        /* 3D Revolving Holographic Format Sphere */
+        /* 3D Dynamic Revolving Holographic Format Carousel */
         .revolving-formats-stage {
             position: relative;
             width: 100%;
-            max-width: 640px;
-            height: 220px;
-            margin: 20px auto 35px auto;
+            max-width: 680px;
+            height: 250px;
+            margin: 25px auto 40px auto;
             display: flex;
             align-items: center;
             justify-content: center;
-            perspective: 1000px;
             pointer-events: none;
         }
 
         .revolving-orbit-track {
             position: absolute;
-            width: 480px;
-            height: 140px;
+            width: 500px;
+            height: 150px;
             border-radius: 50%;
-            border: 1px dashed rgba(37, 99, 235, 0.25);
-            transform: rotateX(68deg) rotateZ(-12deg);
-            transform-style: preserve-3d;
-            animation: orbitTrackSpin 26s linear infinite;
+            border: 1.5px dashed rgba(37, 99, 235, 0.28);
+            box-shadow: 0 0 30px rgba(37, 99, 235, 0.08);
+            pointer-events: none;
         }
 
-        @keyframes orbitTrackSpin {
-            from { transform: rotateX(68deg) rotateZ(0deg); }
-            to { transform: rotateX(68deg) rotateZ(360deg); }
+        /* Continuous 3D Elliptical Planetary Orbit */
+        @keyframes orbitEllipse {
+            0% {
+                transform: translate3d(240px, 0px, 0px) scale(1);
+                z-index: 10;
+                opacity: 1;
+            }
+            12.5% {
+                transform: translate3d(170px, 50px, 0px) scale(1.05);
+                z-index: 10;
+                opacity: 1;
+            }
+            25% {
+                transform: translate3d(0px, 72px, 0px) scale(1.08);
+                z-index: 10;
+                opacity: 1;
+            }
+            37.5% {
+                transform: translate3d(-170px, 50px, 0px) scale(1.05);
+                z-index: 10;
+                opacity: 1;
+            }
+            50% {
+                transform: translate3d(-240px, 0px, 0px) scale(0.96);
+                z-index: 6;
+                opacity: 0.95;
+            }
+            62.5% {
+                transform: translate3d(-170px, -50px, 0px) scale(0.88);
+                z-index: 2;
+                opacity: 0.85;
+            }
+            75% {
+                transform: translate3d(0px, -72px, 0px) scale(0.84);
+                z-index: 2;
+                opacity: 0.80;
+            }
+            87.5% {
+                transform: translate3d(170px, -50px, 0px) scale(0.88);
+                z-index: 2;
+                opacity: 0.85;
+            }
+            100% {
+                transform: translate3d(240px, 0px, 0px) scale(1);
+                z-index: 10;
+                opacity: 1;
+            }
         }
+
+        .orbiting-card-wrapper {
+            position: absolute;
+            animation: orbitEllipse 24s linear infinite;
+            will-change: transform, z-index;
+            pointer-events: auto;
+        }
+
+        /* 6 Items staggered at 4s intervals across the 24s loop */
+        .orbit-card-1 { animation-delay: 0s; }
+        .orbit-card-2 { animation-delay: -4s; }
+        .orbit-card-3 { animation-delay: -8s; }
+        .orbit-card-4 { animation-delay: -12s; }
+        .orbit-card-5 { animation-delay: -16s; }
+        .orbit-card-6 { animation-delay: -20s; }
 
         .format-badge-card {
-            position: absolute;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 9px;
             padding: 8px 14px;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(12px);
             border-radius: 12px;
             border: 1px solid rgba(226, 232, 240, 0.9);
-            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.04);
+            box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.04);
             font-size: 0.84rem;
             font-weight: 700;
             color: #0f172a;
             white-space: nowrap;
-            animation: floatBob 4s ease-in-out infinite alternate;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: default;
+        }
+        .format-badge-card:hover {
+            box-shadow: 0 14px 30px -4px rgba(37, 99, 235, 0.25);
+            border-color: #93c5fd;
         }
 
         .badge-icon {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.76rem;
+            font-size: 0.72rem;
             font-weight: 800;
             color: #ffffff;
+            letter-spacing: 0.5px;
         }
-        .icon-pdf  { background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 2px 6px rgba(239, 68, 68, 0.35); }
-        .icon-docx { background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35); }
-        .icon-xlsx { background: linear-gradient(135deg, #10b981, #047857); box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35); }
-        .icon-pptx { background: linear-gradient(135deg, #f97316, #c2410c); box-shadow: 0 2px 6px rgba(249, 115, 22, 0.35); }
-        .icon-jpg  { background: linear-gradient(135deg, #8b5cf6, #6d28d9); box-shadow: 0 2px 6px rgba(139, 92, 246, 0.35); }
-        .icon-csv  { background: linear-gradient(135deg, #06b6d4, #0e7490); box-shadow: 0 2px 6px rgba(6, 182, 212, 0.35); }
-
-        /* Orbital Positioning & Bobbing */
-        .pos-1 { top: 15px;  left: 30px; animation-delay: 0s; }
-        .pos-2 { top: 15px;  right: 30px; animation-delay: -1.2s; }
-        .pos-3 { bottom: 20px; left: 60px; animation-delay: -2.4s; }
-        .pos-4 { bottom: 20px; right: 60px; animation-delay: -3.1s; }
-        .pos-5 { top: 85px;  left: 0px; animation-delay: -0.7s; }
-        .pos-6 { top: 85px;  right: 0px; animation-delay: -1.9s; }
-
-        @keyframes floatBob {
-            0%   { transform: translateY(0px) scale(1); }
-            50%  { transform: translateY(-8px) scale(1.02); }
-            100% { transform: translateY(6px) scale(0.98); }
-        }
+        .icon-pdf  { background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4); }
+        .icon-docx { background: linear-gradient(135deg, #2563eb, #1d4ed8); box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4); }
+        .icon-xlsx { background: linear-gradient(135deg, #10b981, #047857); box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4); }
+        .icon-pptx { background: linear-gradient(135deg, #f97316, #c2410c); box-shadow: 0 2px 8px rgba(249, 115, 22, 0.4); }
+        .icon-jpg  { background: linear-gradient(135deg, #8b5cf6, #6d28d9); box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4); }
+        .icon-csv  { background: linear-gradient(135deg, #06b6d4, #0e7490); box-shadow: 0 2px 8px rgba(6, 182, 212, 0.4); }
 
         .center-shield-beacon {
-            width: 72px;
-            height: 72px;
+            position: relative;
+            width: 76px;
+            height: 76px;
             background: linear-gradient(145deg, #1e3a8a, #0f172a);
-            border-radius: 20px;
+            border-radius: 22px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2.2rem;
+            font-size: 2.3rem;
             color: #ffffff;
             box-shadow: 0 0 40px rgba(37, 99, 235, 0.35), 0 10px 25px -5px rgba(15, 23, 42, 0.4);
-            border: 2px solid rgba(255, 255, 255, 0.25);
-            z-index: 2;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            z-index: 5;
             animation: beaconPulse 3.5s ease-in-out infinite;
         }
 
         @keyframes beaconPulse {
             0%, 100% { box-shadow: 0 0 30px rgba(37, 99, 235, 0.3), 0 10px 25px rgba(15, 23, 42, 0.3); transform: scale(1); }
-            50% { box-shadow: 0 0 50px rgba(6, 182, 212, 0.5), 0 12px 30px rgba(37, 99, 235, 0.4); transform: scale(1.04); }
+            50% { box-shadow: 0 0 55px rgba(6, 182, 212, 0.55), 0 12px 30px rgba(37, 99, 235, 0.4); transform: scale(1.05); }
+        }
+
+        @media (max-width: 680px) {
+            .revolving-formats-stage {
+                transform: scale(0.65);
+                height: 180px;
+                margin: 10px auto 20px auto;
+            }
         }
         
         /* Architecture Flow Diagram Container */
@@ -296,34 +353,47 @@
                 🔒
             </div>
 
-            <div class="format-badge-card pos-1">
-                <div class="badge-icon icon-pdf">PDF</div>
-                <span>Portable Docs (%PDF)</span>
+            <!-- Revolving Planetary Orbit Items (Continuously revolving around the center lock) -->
+            <div class="orbiting-card-wrapper orbit-card-1">
+                <div class="format-badge-card">
+                    <div class="badge-icon icon-pdf">PDF</div>
+                    <span>Portable Docs (%PDF)</span>
+                </div>
             </div>
 
-            <div class="format-badge-card pos-2">
-                <div class="badge-icon icon-docx">DOC</div>
-                <span>Word Documents (.docx)</span>
+            <div class="orbiting-card-wrapper orbit-card-2">
+                <div class="format-badge-card">
+                    <div class="badge-icon icon-docx">DOC</div>
+                    <span>Word Documents (.docx)</span>
+                </div>
             </div>
 
-            <div class="format-badge-card pos-3">
-                <div class="badge-icon icon-xlsx">XLS</div>
-                <span>Excel Sheets (.xlsx)</span>
+            <div class="orbiting-card-wrapper orbit-card-3">
+                <div class="format-badge-card">
+                    <div class="badge-icon icon-xlsx">XLS</div>
+                    <span>Excel Sheets (.xlsx)</span>
+                </div>
             </div>
 
-            <div class="format-badge-card pos-4">
-                <div class="badge-icon icon-pptx">PPT</div>
-                <span>PowerPoint (.pptx)</span>
+            <div class="orbiting-card-wrapper orbit-card-4">
+                <div class="format-badge-card">
+                    <div class="badge-icon icon-pptx">PPT</div>
+                    <span>PowerPoint (.pptx)</span>
+                </div>
             </div>
 
-            <div class="format-badge-card pos-5">
-                <div class="badge-icon icon-jpg">IMG</div>
-                <span>Media (.jpg, .png, .webp)</span>
+            <div class="orbiting-card-wrapper orbit-card-5">
+                <div class="format-badge-card">
+                    <div class="badge-icon icon-jpg">IMG</div>
+                    <span>Media (.jpg, .png, .webp)</span>
+                </div>
             </div>
 
-            <div class="format-badge-card pos-6">
-                <div class="badge-icon icon-csv">CSV</div>
-                <span>Audit & Records (.csv, .txt)</span>
+            <div class="orbiting-card-wrapper orbit-card-6">
+                <div class="format-badge-card">
+                    <div class="badge-icon icon-csv">CSV</div>
+                    <span>Audit & Records (.csv, .txt)</span>
+                </div>
             </div>
         </div>
     </section>
