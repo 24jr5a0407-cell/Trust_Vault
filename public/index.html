@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trust Vault - Authentication</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container" style="max-width: 500px;">
+        <h1 style="text-align: center;">🔒 Trust Vault</h1>
+        <p style="text-align: center; color: var(--text-muted); margin-bottom: 25px;">Secure Document Protector & Audit System</p>
+
+        <div id="alertBox"></div>
+
+        <!-- TABS -->
+        <div style="display: flex; margin-bottom: 20px; border-bottom: 2px solid var(--border-color);">
+            <button onclick="switchTab('login')" id="tabLogin" style="flex: 1; background: none; color: var(--text-main); border-bottom: 2px solid var(--primary); border-radius: 0;">Sign In</button>
+            <button onclick="switchTab('register')" id="tabRegister" style="flex: 1; background: none; color: var(--text-muted); border-radius: 0;">Register</button>
+            <button onclick="switchTab('request')" id="tabRequest" style="flex: 1; background: none; color: var(--text-muted); border-radius: 0;">Request Access</button>
+        </div>
+
+        <!-- 1. LOGIN FORM -->
+        <div id="formLogin">
+            <h3>Sign In to Your Vault</h3>
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="loginEmail" placeholder="e.g., admin@trustvault.com">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPassword" placeholder="••••••••••••">
+            </div>
+            <button onclick="handleLogin()" style="width: 100%;">Sign In</button>
+        </div>
+
+        <!-- 2. REGISTER FORM -->
+        <div id="formRegister" style="display: none;">
+            <h3>Create Account (Approved Whitelist Only)</h3>
+            <div class="form-group">
+                <label>Approved Email</label>
+                <input type="email" id="regEmail" placeholder="Your approved email">
+            </div>
+            <div class="form-group">
+                <label>Secure Registration Code (Received via Email)</label>
+                <input type="text" id="regCode" placeholder="e.g., TV-A1B">
+            </div>
+            <div class="form-group">
+                <label>Set Password</label>
+                <input type="password" id="regPassword" placeholder="Choose a strong password">
+            </div>
+            <button onclick="handleRegister()" style="width: 100%;">Create Account</button>
+        </div>
+
+        <!-- 3. REQUEST ACCESS FORM -->
+        <div id="formRequest" style="display: none;">
+            <h3>Request Access from Admin</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">New users must submit their email for admin approval before creating an account.</p>
+            <div class="form-group">
+                <label>Your Email Address</label>
+                <input type="email" id="reqEmail" placeholder="name@company.com">
+            </div>
+            <button onclick="handleRequestAccess()" style="width: 100%;">Submit Request</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
