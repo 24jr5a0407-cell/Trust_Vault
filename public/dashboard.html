@@ -27,12 +27,12 @@
 
         <div id="alertBox"></div>
 
-       <!-- TAB NAVIGATION -->
-        <div class="tab-bar-scrollable" style="display: flex; gap: 8px; margin-bottom: 25px; border-bottom: 2px solid var(--border-color); padding-bottom: 12px;">
-            <button onclick="switchDashboardTab('vault')" id="tabVault" style="background: var(--primary);">My Vault</button>
-            <button onclick="switchDashboardTab('catalog')" id="tabCatalog" class="btn-secondary">Document Catalog & Requests</button>
-            <button onclick="switchDashboardTab('incoming')" id="tabIncoming" class="btn-secondary">Incoming Requests For My Docs</button>
-            <button onclick="switchDashboardTab('personal')" id="tabPersonal" class="btn-secondary">Personal Vault</button>
+       <!-- TAB NAVIGATION (iOS Frosted Segmented Control) -->
+        <div class="tab-bar-scrollable">
+            <button onclick="switchDashboardTab('vault')" id="tabVault" class="tab-active">📁 My Vault</button>
+            <button onclick="switchDashboardTab('catalog')" id="tabCatalog">🔍 Document Catalog & Requests</button>
+            <button onclick="switchDashboardTab('incoming')" id="tabIncoming">📬 Incoming Requests For My Docs</button>
+            <button onclick="switchDashboardTab('personal')" id="tabPersonal">🔐 Personal Vault</button>
         </div>
 
         <!-- TAB 1: MY VAULT (Upload & Managed Docs) -->

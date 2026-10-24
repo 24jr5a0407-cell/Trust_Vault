@@ -39,7 +39,15 @@ function switchDashboardTab(tab) {
         const tabBtn = document.getElementById(`tab${s.charAt(0).toUpperCase() + s.slice(1)}`);
         if (secEl) secEl.style.display = (tab === s) ? 'block' : 'none';
         if (tabBtn) {
-            tabBtn.style.background = (tab === s) ? 'var(--primary)' : '#64748b';
+            if (tab === s) {
+                tabBtn.classList.add('tab-active');
+                tabBtn.style.background = '#ffffff';
+                tabBtn.style.color = '#0f172a';
+            } else {
+                tabBtn.classList.remove('tab-active');
+                tabBtn.style.background = 'transparent';
+                tabBtn.style.color = '#64748b';
+            }
         }
     });
 }

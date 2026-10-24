@@ -37,18 +37,21 @@
             </div>
 
             <!-- COMPANY ACTIVE ROSTER IMPORT TOOLBAR -->
-            <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div style="background: linear-gradient(135deg, rgba(240, 253, 250, 0.7) 0%, rgba(248, 250, 252, 0.9) 100%); border: 1px dashed #99f6e4; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
                     <div>
-                        <strong style="color: #1e293b; font-size: 0.95rem;">🏢 Import Active Company Roster</strong>
-                        <p style="color: var(--text-muted); font-size: 0.82rem; margin: 2px 0 0 0;">
-                            Upload a <code>.csv</code> or <code>.txt</code> file with authorized company employee emails (e.g. <code>email,name,department</code> or one email per line).
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.2rem;">🏢</span>
+                            <strong style="color: #0f172a; font-size: 0.96rem;">Import Company Employee Roster</strong>
+                        </div>
+                        <p style="color: var(--text-muted); font-size: 0.83rem; margin: 3px 0 0 0;">
+                            Upload a <code>.csv</code> or <code>.txt</code> file to automatically cross-reference employee validity on whitelist access requests.
                         </p>
                     </div>
-                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                        <input type="file" id="companyRosterFile" accept=".csv,.txt" style="font-size: 0.85rem; padding: 6px 10px; max-width: 250px; background: white;">
-                        <button onclick="uploadCompanyRoster()" style="padding: 7px 14px; font-size: 0.85rem; width: auto !important; background-color: #0d9488;">📤 Import Roster</button>
-                        <button onclick="toggleCompanyRosterModal()" class="btn-secondary" style="padding: 7px 12px; font-size: 0.85rem; width: auto !important;">📋 View Roster (<span id="companyRosterCount">0</span>)</button>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <input type="file" id="companyRosterFile" accept=".csv,.txt" style="font-size: 0.85rem; padding: 6px 12px; max-width: 250px; background: white; border-radius: 8px; border: 1px solid #cbd5e1;">
+                        <button onclick="uploadCompanyRoster()" style="padding: 0 16px; height: 38px; font-size: 0.85rem; width: auto !important; background: var(--gradient-teal); box-shadow: 0 2px 8px rgba(13, 148, 136, 0.25);">📤 Import Roster</button>
+                        <button onclick="toggleCompanyRosterModal()" class="btn-secondary" style="padding: 0 14px; height: 38px; font-size: 0.85rem; width: auto !important;">📋 View Roster (<span id="companyRosterCount" style="font-weight: 700; color: #007aff;">0</span>)</button>
                     </div>
                 </div>
             </div>
