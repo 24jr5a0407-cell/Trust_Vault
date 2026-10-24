@@ -839,7 +839,7 @@ async function loadDashboardIncomingRequests() {
     const email = localStorage.getItem('user_email');
 
     try {
-        const res = await authFetch(`${API_BASE}/requests/incoming/list?user_email=${encodeURIComponent(email)}`);
+        const res = await authFetch(`${API_BASE}/documents/incoming-requests?email=${encodeURIComponent(email)}`);
         const reqs = await res.json();
 
         if (!reqs || reqs.length === 0) {
@@ -882,7 +882,7 @@ async function loadIncomingRequests() {
     const email = localStorage.getItem('user_email');
 
     try {
-        const res = await authFetch(`${API_BASE}/requests/incoming/list?user_email=${encodeURIComponent(email)}`);
+        const res = await authFetch(`${API_BASE}/documents/incoming-requests?email=${encodeURIComponent(email)}`);
         const reqs = await res.json();
 
         if (!reqs || reqs.length === 0) {
