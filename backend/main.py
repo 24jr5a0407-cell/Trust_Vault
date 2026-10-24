@@ -25,6 +25,19 @@ app = FastAPI(
     version="2.0.0"
 )
 
+# Request URL path normalization middleware for Vercel Serverless
+# When Vercel serverless strips the '/api' prefix or routes via rewrites,
+# this transparently restores the '/api' prefix so all FastAPI routes match seamlessly.
+@app.middleware("http")
+async def normalize_vercel_api_paths(request: Request, call_next):
+    raw_path = request.scope.get("path", "")
+    # If request path doesn't start with /api, and is an API route or docs route
+    api_prefixes = ("/login", "/register", "/request-access", "/admin", "/documents", "/requests")
+    if any(raw_path.startswith(prefix) for prefix in api_prefixes):
+        request.scope["path"] = f"/api{raw_path}"
+        logger.info(f"Normalized Vercel path: {raw_path} -> {request.scope['path']}")
+    return await call_next(request)
+
 # Request logging and timing middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
@@ -49,7 +62,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount all feature routers
+# Mount all feature routers with /api prefix
 app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(documents.router)
