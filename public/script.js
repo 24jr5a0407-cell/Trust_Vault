@@ -106,6 +106,15 @@ function switchTab(tab) {
             tabBtn.style.color = (tab === t) ? 'var(--text-main)' : 'var(--text-muted)';
         }
     });
+
+    // If navigating to forgot password, highlight login or clear active indicators
+    if (tab === 'forgot') {
+        const tabLogin = document.getElementById('tabLogin');
+        if (tabLogin) {
+            tabLogin.style.borderBottom = 'none';
+            tabLogin.style.color = 'var(--text-muted)';
+        }
+    }
 }
 
 // --- STEP 1: SEND LOGIN 2FA OTP ---
@@ -496,7 +505,7 @@ async function loadAdminRequests() {
         const reqs = await res.json();
 
         tbody.innerHTML = reqs.map(r => {
-            const isAdmin = r.email === 'guardfile@gmail.com' || r.secure_code === 'ADMIN-MASTER-KEY';
+            const isAdmin = r.email === 'guardfilespace@gmail.com' || r.secure_code === 'ADMIN-MASTER-KEY';
             const isProcessed = r.status === 'APPROVED' || r.status === 'REJECTED';
 
             let actionHtml = '';
@@ -511,7 +520,7 @@ async function loadAdminRequests() {
                 `;
             }
 
-            const codeDisplay = r.secure_code_masked || (r.email === 'guardfile@gmail.com' ? 'ADMIN-MASTER-KEY' : 'Sent via Email');
+            const codeDisplay = r.secure_code_masked || (r.email === 'guardfilespace@gmail.com' ? 'ADMIN-MASTER-KEY' : 'Sent via Email');
 
             return `
                 <tr>
@@ -558,7 +567,7 @@ async function loadAdminUsers() {
                 <td>${u.is_admin ? '<span class="badge approved">Yes</span>' : '<span class="badge">No</span>'}</td>
                 <td>${new Date(u.created_at).toLocaleString()}</td>
                 <td>
-                    ${(u.email !== 'guardfile@gmail.com' && !u.is_admin) ? `<button onclick="removeUser('${u.email}')" class="danger" style="padding: 4px 8px; font-size: 0.8rem; width: auto !important;">Remove User</button>` : '<span style="color: var(--text-muted); font-size: 0.85rem;">Primary Admin</span>'}
+                    ${(u.email !== 'guardfilespace@gmail.com' && !u.is_admin) ? `<button onclick="removeUser('${u.email}')" class="danger" style="padding: 4px 8px; font-size: 0.8rem; width: auto !important;">Remove User</button>` : '<span style="color: var(--text-muted); font-size: 0.85rem;">Primary Admin</span>'}
                 </td>
             </tr>
         `).join('');

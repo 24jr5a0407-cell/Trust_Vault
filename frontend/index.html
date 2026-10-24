@@ -18,7 +18,6 @@
             <button onclick="switchTab('login')" id="tabLogin" style="flex: 1; background: none; color: var(--text-main); border-bottom: 2px solid var(--primary); border-radius: 0;">Sign In (2FA)</button>
             <button onclick="switchTab('register')" id="tabRegister" style="flex: 1; background: none; color: var(--text-muted); border-radius: 0;">Register</button>
             <button onclick="switchTab('request')" id="tabRequest" style="flex: 1; background: none; color: var(--text-muted); border-radius: 0;">Request Access</button>
-            <button onclick="switchTab('forgot')" id="tabForgot" style="flex: 1; background: none; color: var(--text-muted); border-radius: 0;">Forgot Password</button>
         </div>
 
         <!-- 1. LOGIN FORM WITH 2FA OTP -->
@@ -28,11 +27,14 @@
             
             <div class="form-group">
                 <label>Email Address</label>
-                <input type="email" id="loginEmail" placeholder="e.g., guardfile@gmail.com">
+                <input type="email" id="loginEmail" placeholder="e.g., guardfilespace@gmail.com">
             </div>
             <div class="form-group">
-                <label>Password</label>
-                <input type="password" id="loginPassword" placeholder="••••••••••••">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <label style="margin-bottom: 0;">Password</label>
+                    <a href="javascript:void(0)" onclick="switchTab('forgot')" style="font-size: 0.82rem; color: var(--primary); font-weight: 500; text-decoration: none;">Forgot password?</a>
+                </div>
+                <input type="password" id="loginPassword" placeholder="••••••••••••" style="margin-top: 6px;">
             </div>
 
             <!-- STEP 1: REQUEST OTP BUTTON -->
@@ -52,8 +54,9 @@
                 </p>
             </div>
 
-            <div style="text-align: right; margin-top: 10px;">
-                <a href="javascript:void(0)" onclick="switchTab('forgot')" style="font-size: 0.85rem; color: var(--primary); text-decoration: none;">Forgot your password?</a>
+            <div style="text-align: center; margin-top: 15px;">
+                <span style="font-size: 0.85rem; color: var(--text-muted);">Don't have access?</span>
+                <a href="javascript:void(0)" onclick="switchTab('request')" style="font-size: 0.85rem; color: var(--primary); text-decoration: none; margin-left: 4px;">Request Access</a>
             </div>
         </div>
 
@@ -89,7 +92,10 @@
 
         <!-- 4. FORGOT PASSWORD WITH 5-MIN OTP -->
         <div id="formForgot" style="display: none;">
-            <h3>Reset Forgotten Password</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0;">Reset Forgotten Password</h3>
+                <a href="javascript:void(0)" onclick="switchTab('login')" style="font-size: 0.85rem; color: var(--primary); text-decoration: none;">← Back to Sign In</a>
+            </div>
             <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Enter your registered email to receive a 5-minute one-time verification password reset code.</p>
 
             <div id="forgotStep1">

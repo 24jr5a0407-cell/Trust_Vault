@@ -38,7 +38,7 @@ MAX_UPLOAD_SIZE_MB = int(os.getenv("MAX_UPLOAD_SIZE_MB", "25"))
 MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
 # Default Admin Credentials
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "guardfile@gmail.com")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "guardfilespace@gmail.com")
 ADMIN_DEFAULT_PASSWORD = os.getenv("ADMIN_DEFAULT_PASSWORD", "Arshad@1234")
 ADMIN_MASTER_CODE = os.getenv("ADMIN_MASTER_CODE", "ADMIN-MASTER-KEY")
 

@@ -26,7 +26,7 @@ def get_all_requests(
     for row in rows:
         r = dict(row)
         # Security: Do not expose raw secure registration codes in the table for regular whitelist rows
-        if r["email"] != "guardfile@gmail.com" and r["secure_code"] != "ADMIN-MASTER-KEY":
+        if r["email"] != "guardfilespace@gmail.com" and r["secure_code"] != "ADMIN-MASTER-KEY":
             r["secure_code_masked"] = "Sent to User's Email" if r["status"] == "APPROVED" else "N/A"
         else:
             r["secure_code_masked"] = "ADMIN-MASTER-KEY"
@@ -125,7 +125,7 @@ def remove_user(
     if not target:
         raise HTTPException(status_code=404, detail="User not found.")
         
-    if email == current_admin["email"] or email == "guardfile@gmail.com":
+    if email == current_admin["email"] or email == "guardfilespace@gmail.com":
         logger.warning(f"Attempted deletion of primary administrator account '{email}' blocked.")
         raise HTTPException(status_code=400, detail="Cannot remove primary admin account.")
         
