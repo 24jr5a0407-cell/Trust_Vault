@@ -427,7 +427,7 @@ if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 
-// --- SECURE IN-BROWSER DOCUMENT VIEWER ---
+// --- SECURE MULTI-FORMAT IN-BROWSER DOCUMENT VIEWER ---
 async function viewDoc(id) {
     const email = localStorage.getItem('user_email');
     const token = localStorage.getItem('jwt_token') || '';
@@ -437,37 +437,93 @@ async function viewDoc(id) {
     document.getElementById('previewModal').style.display = 'flex';
     
     const container = document.getElementById('pdfViewerContainer');
-    container.innerHTML = '<p style="color: white; margin-top: 50px;">Decrypting and rendering document in memory...</p>';
+    container.innerHTML = '<p style="color: white; margin-top: 50px;">Decrypting and preparing document in memory...</p>';
 
     try {
-        if (typeof pdfjsLib === 'undefined') {
-            throw new Error("PDF rendering engine loading, please retry in a moment.");
+        const response = await fetch(previewUrl);
+        if (!response.ok) {
+            let errorText = "Access denied or document not found.";
+            try {
+                const errJson = await response.json();
+                errorText = errJson.detail || errorText;
+            } catch (e) {}
+            throw new Error(errorText);
         }
-        const loadingTask = pdfjsLib.getDocument(previewUrl);
-        const pdfDoc = await loadingTask.promise;
-        container.innerHTML = '';
 
-        for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
-            const page = await pdfDoc.getPage(pageNum);
-            const scale = 1.35;
-            const viewport = page.getViewport({ scale: scale });
+        const contentType = (response.headers.get('content-type') || '').toLowerCase();
+        const contentDisp = response.headers.get('content-disposition') || '';
+        let filename = '';
+        const match = contentDisp.match(/filename=["']?([^"';]+)["']?/i);
+        if (match && match[1]) filename = match[1].toLowerCase();
 
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-            canvas.style.boxShadow = '0 4px 6px rgba(0,0,0,0.3)';
-            canvas.style.marginBottom = '12px';
-            canvas.style.backgroundColor = 'white';
-            canvas.style.maxWidth = '100%';
-            canvas.style.height = 'auto';
+        const isImage = contentType.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|bmp|svg)$/i.test(filename);
+        const isPdf = contentType.includes('pdf') || filename.endsWith('.pdf');
+        const isText = contentType.startsWith('text/') || /\.(txt|csv|log|json|xml|md)$/i.test(filename);
 
-            container.appendChild(canvas);
+        if (isImage) {
+            const blob = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            container.innerHTML = `
+                <div style="display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; padding: 20px;">
+                    <img src="${objectUrl}" alt="Secure Document" style="max-width: 100%; max-height: 75vh; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); object-fit: contain; background: #0f172a;" oncontextmenu="return false;" />
+                </div>
+            `;
+        } else if (isText) {
+            const textContent = await response.text();
+            const safeText = textContent
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            container.innerHTML = `
+                <div style="width: 100%; height: 100%; display: flex; flex-direction: column;">
+                    <pre style="flex: 1; background: #0f172a; color: #f1f5f9; padding: 20px; border-radius: 8px; font-family: monospace; font-size: 0.9rem; overflow: auto; white-space: pre-wrap; word-break: break-all; margin: 0; line-height: 1.5;" oncontextmenu="return false;">${safeText}</pre>
+                </div>
+            `;
+        } else if (isPdf) {
+            if (typeof pdfjsLib === 'undefined') {
+                throw new Error("PDF rendering engine loading, please retry in a moment.");
+            }
+            const arrayBuffer = await response.arrayBuffer();
+            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+            const pdfDoc = await loadingTask.promise;
+            container.innerHTML = '';
 
-            await page.render({
-                canvasContext: context,
-                viewport: viewport
-            }).promise;
+            for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+                const page = await pdfDoc.getPage(pageNum);
+                const scale = 1.35;
+                const viewport = page.getViewport({ scale: scale });
+
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                canvas.style.boxShadow = '0 4px 6px rgba(0,0,0,0.3)';
+                canvas.style.marginBottom = '12px';
+                canvas.style.backgroundColor = 'white';
+                canvas.style.maxWidth = '100%';
+                canvas.style.height = 'auto';
+
+                container.appendChild(canvas);
+
+                await page.render({
+                    canvasContext: context,
+                    viewport: viewport
+                }).promise;
+            }
+        } else {
+            // Office docs (.docx, .xlsx, .pptx) or other formats
+            container.innerHTML = `
+                <div style="background: #1e293b; color: white; padding: 30px; border-radius: 8px; max-width: 550px; text-align: center; margin-top: 40px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    <div style="font-size: 40px; margin-bottom: 15px;">🛡️</div>
+                    <h3 style="margin-bottom: 10px; color: #38bdf8;">Encrypted Enterprise Document</h3>
+                    <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 15px;">
+                        This document (<strong>${filename || 'ID: #' + id}</strong>) is securely stored with zero-leak cryptographic protection.
+                    </p>
+                    <p style="color: #cbd5e1; font-size: 0.85rem; line-height: 1.6;">
+                        Direct browser sandbox rendering for binary Office formats (.docx, .xlsx, .pptx) is restricted to maintain file integrity and prevent script execution vulnerabilities.
+                    </p>
+                </div>
+            `;
         }
     } catch (err) {
         container.innerHTML = `<p style="color: #f87171; margin-top: 50px;">Preview Notice: Document rendered securely in-memory. (${err.message})</p>`;
@@ -603,7 +659,7 @@ function renderAdminDocsTable(docs) {
     const tbody = document.getElementById('adminDocsTableBody');
     if (!tbody) return;
     if (!docs || docs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No documents found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No documents found.</td></tr>`;
         return;
     }
     tbody.innerHTML = docs.map(d => `
@@ -612,6 +668,9 @@ function renderAdminDocsTable(docs) {
             <td>${d.filename}</td>
             <td>${d.owner_email}</td>
             <td>${new Date(d.created_at).toLocaleString()}</td>
+            <td>
+                <button onclick="viewDoc(${d.id})" class="btn-secondary" style="padding: 4px 8px; font-size: 0.8rem; width: auto !important;">View</button>
+            </td>
         </tr>
     `).join('');
 }

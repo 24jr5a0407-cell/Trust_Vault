@@ -1,6 +1,7 @@
 import os
 import uuid
 import io
+import mimetypes
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from fastapi.responses import FileResponse, StreamingResponse
 import schemas
@@ -161,15 +162,19 @@ def preview_document(
     db.commit()
     
     # 1. Try local storage if file actually exists on disk
+    guessed_type, _ = mimetypes.guess_type(doc["filename"])
+    content_type = guessed_type or "application/octet-stream"
+
     if os.path.exists(doc["file_path"]):
-        return FileResponse(path=doc["file_path"], filename=doc["filename"], content_disposition_type="inline")
+        return FileResponse(path=doc["file_path"], filename=doc["filename"], media_type=content_type, content_disposition_type="inline")
     
     # 2. Direct streaming from Backblaze B2 cloud storage
     try:
         is_personal = bool(dict(doc).get("is_personal", 0))
         b2_key = f"personal-documents/{doc['owner_email'].replace('/', '_').strip()}/{doc['stored_filename']}" if is_personal else f"official-documents/{doc['stored_filename']}"
-        stream, content_type = get_file_from_b2(b2_key)
-        return StreamingResponse(stream, media_type=content_type, headers={"Content-Disposition": f"inline; filename=\"{doc['filename']}\""})
+        stream, b2_type = get_file_from_b2(b2_key)
+        final_type = guessed_type or b2_type or "application/octet-stream"
+        return StreamingResponse(stream, media_type=final_type, headers={"Content-Disposition": f"inline; filename=\"{doc['filename']}\""})
     except Exception as e:
         logger.error(f"Error streaming preview from cloud storage for doc {document_id}: {e}")
         raise HTTPException(status_code=404, detail="File missing from storage.")

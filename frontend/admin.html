@@ -86,10 +86,11 @@
                             <th>Filename</th>
                             <th>Owner</th>
                             <th>Created At</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="adminDocsTableBody">
-                        <tr><td colspan="4" style="text-align: center;">Loading documents...</td></tr>
+                        <tr><td colspan="5" style="text-align: center;">Loading documents...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -150,6 +151,23 @@
                         <tr><td colspan="6" style="text-align: center;">Loading requests...</td></tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- DOCUMENT PREVIEW MODAL -->
+    <div id="previewModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; padding: 12px;">
+        <div style="background: white; width: 100%; max-width: 950px; height: 90vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                <h3 id="previewTitle" style="margin: 0; font-size: 1.1rem;">Document Preview (Read-Only)</h3>
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="showDownloadDisabledWarning()" class="btn-secondary" style="padding: 6px 12px; font-size: 0.85rem; background: #475569;">⬇️ Download</button>
+                    <button onclick="closePreview()" class="danger" style="padding: 6px 12px; font-size: 0.85rem;">✕ Close</button>
+                </div>
+            </div>
+
+            <div id="pdfViewerContainer" style="flex: 1; overflow-y: auto; background: #334155; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 15px; user-select: none;" oncontextmenu="return false;">
+                <p style="color: white; margin-top: 50px;">Loading secure document...</p>
             </div>
         </div>
     </div>
