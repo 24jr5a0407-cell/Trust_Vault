@@ -351,8 +351,8 @@ function renderVaultTable(docs) {
             <td>${doc.owner_email}</td>
             <td>${new Date(doc.created_at).toLocaleString()}</td>
             <td>
-                <button onclick="viewDoc(${doc.id})" class="btn-secondary" style="padding: 5px 10px; font-size: 0.8rem; width: auto !important;">View</button>
-                <button onclick="showDownloadDisabledWarning()" class="btn-secondary" style="padding: 5px 10px; font-size: 0.8rem; background: #64748b; width: auto !important;">Download</button>
+                <button onclick="viewDoc(${doc.id})" class="btn-secondary" style="padding: 6px 12px; font-size: 0.82rem; width: auto !important;">👁️ View</button>
+                <button onclick="showDownloadDisabledWarning()" class="btn-download-vault" style="padding: 6px 12px; font-size: 0.82rem; width: auto !important;">⬇️ Download</button>
             </td>
         </tr>
     `).join('');
@@ -796,8 +796,8 @@ function renderCatalogTable(docs) {
             actionBtn = `<span style="color: var(--text-muted); font-size: 0.85rem;">Document Owner</span>`;
         } else if (doc.request_status === 'APPROVED') {
             actionBtn = `
-                <button onclick="viewDoc(${doc.id})" class="btn-secondary" style="padding: 4px 8px; font-size: 0.8rem; width: auto !important;">View</button>
-                <button onclick="showDownloadDisabledWarning()" class="btn-secondary" style="padding: 4px 8px; font-size: 0.8rem; background: #64748b; width: auto !important;">Download</button>
+                <button onclick="viewDoc(${doc.id})" class="btn-secondary" style="padding: 5px 10px; font-size: 0.82rem; width: auto !important;">👁️ View</button>
+                <button onclick="showDownloadDisabledWarning()" class="btn-download-vault" style="padding: 5px 10px; font-size: 0.82rem; width: auto !important;">⬇️ Download</button>
             `;
         } else if (doc.request_status === 'PENDING') {
             actionBtn = `<span class="badge pending">Request Pending</span>`;

@@ -295,6 +295,29 @@ button.danger:hover {
     box-shadow: var(--shadow-sm);
 }
 
+/* Modern Interactive Secure Download Button */
+.btn-download-vault {
+    background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%) !important;
+    color: #475569 !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.btn-download-vault:hover {
+    background: linear-gradient(135deg, #edf2f7 0%, #e2e8f0 100%) !important;
+    color: #0f172a !important;
+    border-color: #94a3b8 !important;
+    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.08) !important;
+    transform: translateY(-1px);
+}
+
+.btn-download-vault:active {
+    transform: scale(0.97) !important;
+}
+
 /* Segmented Control Bar (Apple/macOS High-Performance Tab Bar) */
 .tab-bar-scrollable {
     display: flex;
