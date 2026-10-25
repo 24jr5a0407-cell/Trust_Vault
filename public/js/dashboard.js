@@ -165,11 +165,18 @@ async function uploadDocument() {
     formData.append("owner_email", email);
 
     try {
+        showAlert("Uploading and encrypting document in Vault...", "info");
         const res = await authFetch(`${API_BASE}/documents/upload`, {
             method: 'POST',
             body: formData
         });
-        const data = await res.json();
+        let data = {};
+        const text = await res.text();
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            data = { detail: text || "Server returned non-JSON response" };
+        }
         if (!res.ok) throw new Error(data.detail || "Upload failed");
 
         showAlert("Document uploaded successfully!", "success");
@@ -178,6 +185,18 @@ async function uploadDocument() {
     } catch (err) {
         showAlert(err.message, "error");
     }
+}
+
+function downloadOfficialDoc(id) {
+    const email = localStorage.getItem('user_email');
+    const token = localStorage.getItem('jwt_token') || '';
+    const downloadUrl = `${API_BASE}/documents/${id}/download?user_email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.setAttribute('download', '');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 }
 
 // --- 2. CATALOG & PUBLIC PERMISSION REQUESTS ---
