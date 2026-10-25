@@ -57,7 +57,26 @@ async function handleSendLoginOtp() {
         document.getElementById('loginOtp').value = '';
         document.getElementById('loginOtp').focus();
     } catch (err) {
-        showAlert(err.message, 'error');
+        if (err.message && err.message.toLowerCase().includes("account not found")) {
+            showAppModal({
+                title: "Account Not Found",
+                message: "This account was not found in Trust Vault. Please submit an access request to the administrator and register your account.",
+                okText: "Request Access Now",
+                cancelText: "Register with Code",
+                onOk: () => {
+                    const reqEmail = document.getElementById('reqEmail');
+                    if (reqEmail) reqEmail.value = email;
+                    switchTab('request');
+                },
+                onCancel: () => {
+                    const regEmail = document.getElementById('regEmail');
+                    if (regEmail) regEmail.value = email;
+                    switchTab('register');
+                }
+            });
+        } else {
+            showAlert(err.message, 'error');
+        }
         if (reqBtn) {
             reqBtn.disabled = false;
             reqBtn.innerText = "📧 Send 5-Min Login OTP to My Email";

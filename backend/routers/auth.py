@@ -78,7 +78,13 @@ def send_login_otp(payload: schemas.SendLoginOtp, db = Depends(get_db)):
     cursor.execute("SELECT * FROM users WHERE email = ?", (payload.email,))
     user = cursor.fetchone()
     
-    if not user or not verify_password(payload.password, user['hashed_password']):
+    if not user:
+        raise HTTPException(
+            status_code=404, 
+            detail="Account not found. Please submit an access request to the administrator and register your account."
+        )
+        
+    if not verify_password(payload.password, user['hashed_password']):
         raise HTTPException(status_code=401, detail="Invalid email or password.")
         
     otp = generate_otp()
@@ -123,7 +129,13 @@ def login_user(credentials: schemas.UserLogin, db = Depends(get_db)):
     cursor.execute("SELECT * FROM users WHERE email = ?", (credentials.email,))
     user = cursor.fetchone()
     
-    if not user or not verify_password(credentials.password, user['hashed_password']):
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="Account not found. Please submit an access request to the administrator and register your account."
+        )
+    
+    if not verify_password(credentials.password, user['hashed_password']):
         logger.warning(f"Failed login attempt for email: {credentials.email}")
         raise HTTPException(status_code=401, detail="Invalid email or password.")
     
