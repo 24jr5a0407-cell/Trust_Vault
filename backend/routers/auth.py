@@ -59,7 +59,10 @@ def register_user(user_data: schemas.UserRegister, db = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Account already exists. Please sign in.")
     
     hashed_pwd = hash_password(user_data.password)
-    cursor.execute("INSERT INTO users (email, hashed_password, is_admin) VALUES (?, ?, 0)", (user_data.email, hashed_pwd))
+    cursor.execute("""
+        INSERT INTO users (email, hashed_password, is_admin, full_name, phone, gender) 
+        VALUES (?, ?, 0, ?, ?, ?)
+    """, (user_data.email, hashed_pwd, user_data.full_name or '', user_data.phone or '', user_data.gender or ''))
     db.commit()
     
     logger.info(f"User registration successful for: {user_data.email}")
@@ -245,6 +248,45 @@ def reset_password(payload: schemas.ResetPasswordWithOtp, db = Depends(get_db)):
     new_hashed = hash_password(payload.new_password)
     cursor.execute("UPDATE users SET hashed_password = ? WHERE email = ?", (new_hashed, payload.email))
     db.commit()
+    logger.info(f"Password reset successful for: {payload.email}")
+    return {"message": "Password reset successful! You can now sign in with your new password."}
+
+
+@router.get("/profile")
+def get_user_profile(user_email: str = None, db = Depends(get_db)):
+    """Retrieves current user profile information."""
+    if not user_email:
+        raise HTTPException(status_code=400, detail="User email required.")
+    cursor = db.cursor()
+    cursor.execute("SELECT id, email, is_admin, full_name, phone, gender, profile_photo, created_at FROM users WHERE email = ?", (user_email,))
+    user = cursor.fetchone()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    data = dict(user)
+    return data
+
+
+@router.put("/profile")
+def update_user_profile(payload: schemas.UserProfileUpdate, user_email: str = None, db = Depends(get_db)):
+    """Updates user profile information (name, phone, gender, profile photo)."""
+    if not user_email:
+        raise HTTPException(status_code=400, detail="User email required.")
+    cursor = db.cursor()
+    cursor.execute("SELECT id FROM users WHERE email = ?", (user_email,))
+    if not cursor.fetchone():
+        raise HTTPException(status_code=404, detail="User not found.")
+    
+    cursor.execute("""
+        UPDATE users 
+        SET full_name = COALESCE(?, full_name),
+            phone = COALESCE(?, phone),
+            gender = COALESCE(?, gender),
+            profile_photo = COALESCE(?, profile_photo)
+        WHERE email = ?
+    """, (payload.full_name, payload.phone, payload.gender, payload.profile_photo, user_email))
+    db.commit()
+    logger.info(f"User profile updated for '{user_email}'")
+    return {"message": "Profile updated successfully!"}
     
     logger.info(f"Password reset successfully completed for user: {payload.email}")
     return {"message": "Password changed successfully! You can now sign in with your new password."}

@@ -33,6 +33,7 @@
             <button onclick="switchDashboardTab('catalog')" id="tabCatalog">🔍 Document Catalog & Requests</button>
             <button onclick="switchDashboardTab('incoming')" id="tabIncoming">📬 Incoming Requests For My Docs</button>
             <button onclick="switchDashboardTab('personal')" id="tabPersonal">🔐 Personal Vault</button>
+            <button onclick="switchDashboardTab('profile')" id="tabProfile">👤 Profile</button>
         </div>
 
         <!-- TAB 1: MY VAULT (Upload & Managed Docs) -->
@@ -199,6 +200,62 @@
                         <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Loading personal vault...</td></tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- TAB 5: MY PROFILE -->
+        <div id="sectionProfile" class="dashboard-section" style="display: none;">
+            <div class="card" style="max-width: 650px; margin: 0 auto;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;">
+                    <span style="font-size: 1.4rem;">👤</span>
+                    <h3 style="margin: 0;">User Account Profile</h3>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border-light); flex-wrap: wrap;">
+                    <div style="position: relative;">
+                        <img id="profilePhotoDisplay" src="logo-icon.png" alt="Profile Avatar" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--brand-primary); box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    </div>
+                    <div>
+                        <h4 id="profileNameHeader" style="margin: 0 0 4px 0; font-size: 1.15rem; color: #0f172a;">User Profile</h4>
+                        <p id="profileEmailHeader" style="margin: 0; color: var(--text-muted); font-size: 0.88rem;"></p>
+                        <span id="profileRoleBadge" class="badge approved" style="margin-top: 6px;">Active User</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Profile Photo URL or Direct Image Link</label>
+                    <input type="text" id="editProfilePhoto" placeholder="https://example.com/photo.jpg or leave blank">
+                </div>
+
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="editProfileName" placeholder="Your Full Name">
+                </div>
+
+                <div class="form-group">
+                    <label>Mobile / Phone Number</label>
+                    <input type="tel" id="editProfilePhone" placeholder="+1 (555) 000-0000">
+                </div>
+
+                <div class="form-group">
+                    <label>Gender</label>
+                    <select id="editProfileGender">
+                        <option value="">Not Specified</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                        <option value="Prefer not to say">Prefer not to say</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Registered Email (Identity Protected)</label>
+                    <input type="email" id="editProfileEmail" readonly style="background: #f1f5f9; cursor: not-allowed; color: #64748b;">
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+                    <button onclick="saveUserProfile()" style="padding: 0 24px;">Save Profile Changes</button>
+                </div>
             </div>
         </div>
     </div>

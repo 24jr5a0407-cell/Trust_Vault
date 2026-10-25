@@ -98,15 +98,18 @@ async function handleLogin() {
 
 // --- REGISTER (WITH PRE-APPROVED SECURE CODE) ---
 async function handleRegister() {
-    const email = document.getElementById('regEmail').value.trim();
-    const secure_code = document.getElementById('regCode').value.trim();
-    const password = document.getElementById('regPassword').value;
+    const email = document.getElementById('regEmail')?.value.trim();
+    const full_name = document.getElementById('regFullName')?.value.trim() || '';
+    const phone = document.getElementById('regPhone')?.value.trim() || '';
+    const gender = document.getElementById('regGender')?.value || '';
+    const secure_code = document.getElementById('regCode')?.value.trim();
+    const password = document.getElementById('regPassword')?.value;
 
     try {
         const res = await authFetch(`${API_BASE}/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, secure_code, password })
+            body: JSON.stringify({ email, secure_code, password, full_name, phone, gender })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || "Registration failed");

@@ -404,30 +404,48 @@ async function loadIncomingRequests() {
         }
 
         tbody.innerHTML = reqs.map(r => {
-            let actions = '';
-            if (r.status === 'APPROVED') {
-                actions = `<button onclick="revokeAccess(${r.document_id}, '${r.user_email}')" class="danger" style="padding: 4px 8px; font-size: 0.8rem; width: auto !important;">Revoke Access</button>`;
-            } else if (r.status === 'PENDING') {
-                actions = `
-                    <button onclick="manageRequest(${r.id}, 'APPROVED')" style="padding: 4px 8px; background: #22c55e; font-size: 0.8rem; width: auto !important;">Approve</button>
-                    <button onclick="manageRequest(${r.id}, 'REJECTED')" class="danger" style="padding: 4px 8px; font-size: 0.8rem; width: auto !important;">Reject</button>
-                `;
-            } else {
-                actions = `<span style="color: var(--text-muted); font-size: 0.85rem;">Status: ${r.status}</span>`;
-            }
+            const currentStatus = r.status.toUpperCase();
+            const actionSelect = `
+                <select onchange="handleAdminPermissionChange(${r.id}, ${r.document_id}, '${r.user_email}', this.value)" style="height: 32px; padding: 2px 8px; font-size: 0.82rem; border-radius: 6px; border: 1px solid #cbd5e1; background: white; font-weight: 600;">
+                    <option value="APPROVED" ${currentStatus === 'APPROVED' ? 'selected' : ''}>✅ Granted Access (Approved)</option>
+                    <option value="REJECTED" ${currentStatus === 'REJECTED' ? 'selected' : ''}>❌ Rejected</option>
+                    <option value="REVOKED" ${currentStatus === 'REVOKED' ? 'selected' : ''}>🚫 Revoked</option>
+                    <option value="PENDING" ${currentStatus === 'PENDING' ? 'selected' : ''}>⏳ Pending Review</option>
+                </select>
+            `;
 
             return `
                 <tr>
                     <td><strong>#${r.id}</strong></td>
                     <td>${r.filename} (ID: #${r.document_id})</td>
-                    <td>${r.user_email}</td>
+                    <td><strong>${r.user_email}</strong></td>
                     <td>${r.owner_email}</td>
                     <td><span class="badge ${r.status.toLowerCase()}">${r.status}</span></td>
-                    <td>${actions}</td>
+                    <td>${actionSelect}</td>
                 </tr>
             `;
         }).join('');
     } catch (err) { console.error(err); }
+}
+
+async function handleAdminPermissionChange(requestId, docId, targetEmail, newStatus) {
+    const email = localStorage.getItem('user_email');
+    try {
+        showAlert(`Updating access permission to ${newStatus}...`, 'info');
+        const res = await authFetch(`${API_BASE}/requests/manage/${requestId}?reviewer_email=${encodeURIComponent(email)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus, actor_email: email })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail);
+
+        showAlert(data.message || `Access updated to ${newStatus}`, 'success');
+        loadIncomingRequests();
+    } catch (err) {
+        showAlert(err.message, 'error');
+        loadIncomingRequests();
+    }
 }
 
 async function manageRequest(requestId, status) {

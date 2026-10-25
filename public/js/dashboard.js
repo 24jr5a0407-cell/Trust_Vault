@@ -33,7 +33,7 @@ async function checkAuthAndLoadDashboard() {
 
 // --- TAB NAVIGATION ---
 function switchDashboardTab(tab) {
-    const sections = ['vault', 'catalog', 'incoming', 'personal'];
+    const sections = ['vault', 'catalog', 'incoming', 'personal', 'profile'];
     sections.forEach(s => {
         const secEl = document.getElementById(`section${s.charAt(0).toUpperCase() + s.slice(1)}`);
         const tabBtn = document.getElementById(`tab${s.charAt(0).toUpperCase() + s.slice(1)}`);
@@ -50,6 +50,10 @@ function switchDashboardTab(tab) {
             }
         }
     });
+
+    if (tab === 'profile') {
+        loadUserProfile();
+    }
 }
 
 // --- 1. MY VAULT (ACCESSIBLE DOCUMENTS) ---
@@ -324,17 +328,15 @@ async function loadDashboardIncomingRequests() {
         }
 
         tbody.innerHTML = reqs.map(r => {
-            let actions = '';
-            if (r.status === 'APPROVED') {
-                actions = `<button onclick="revokeAccess(${r.document_id}, '${r.user_email}')" class="danger" style="padding: 4px 8px; font-size: 0.8rem; width: auto !important;">Revoke Access</button>`;
-            } else if (r.status === 'PENDING') {
-                actions = `
-                    <button onclick="manageRequest(${r.id}, 'APPROVED')" style="padding: 4px 8px; background: #22c55e; font-size: 0.8rem; width: auto !important;">Approve</button>
-                    <button onclick="manageRequest(${r.id}, 'REJECTED')" class="danger" style="padding: 4px 8px; font-size: 0.8rem; width: auto !important;">Reject</button>
-                `;
-            } else {
-                actions = `<span style="color: var(--text-muted); font-size: 0.85rem;">Status: ${r.status}</span>`;
-            }
+            const currentStatus = r.status.toUpperCase();
+            const actionSelect = `
+                <select onchange="manageRequest(${r.id}, this.value)" style="height: 32px; padding: 2px 8px; font-size: 0.82rem; border-radius: 6px; border: 1px solid #cbd5e1; background: white; font-weight: 600;">
+                    <option value="APPROVED" ${currentStatus === 'APPROVED' ? 'selected' : ''}>✅ Grant Access (Approved)</option>
+                    <option value="REJECTED" ${currentStatus === 'REJECTED' ? 'selected' : ''}>❌ Reject Access</option>
+                    <option value="REVOKED" ${currentStatus === 'REVOKED' ? 'selected' : ''}>🚫 Revoke Access</option>
+                    <option value="PENDING" ${currentStatus === 'PENDING' ? 'selected' : ''}>⏳ Pending</option>
+                </select>
+            `;
 
             return `
                 <tr>
@@ -343,7 +345,7 @@ async function loadDashboardIncomingRequests() {
                     <td><strong>${r.user_email}</strong></td>
                     <td><span class="badge ${r.status.toLowerCase()}">${r.status}</span></td>
                     <td>${new Date(r.created_at).toLocaleString()}</td>
-                    <td>${actions}</td>
+                    <td>${actionSelect}</td>
                 </tr>
             `;
         }).join('');
@@ -502,4 +504,76 @@ async function deletePersonalDocument(id) {
             }
         }
     });
+}
+
+// --- 5. USER PROFILE CONTROLLER ---
+async function loadUserProfile() {
+    const email = localStorage.getItem('user_email');
+    if (!email) return;
+
+    try {
+        const res = await authFetch(`${API_BASE}/profile?user_email=${encodeURIComponent(email)}`);
+        const user = await res.json();
+        if (!res.ok) throw new Error(user.detail || "Failed to load profile");
+
+        const nameHeader = document.getElementById('profileNameHeader');
+        const emailHeader = document.getElementById('profileEmailHeader');
+        const roleBadge = document.getElementById('profileRoleBadge');
+        const photoDisplay = document.getElementById('profilePhotoDisplay');
+
+        const editName = document.getElementById('editProfileName');
+        const editPhone = document.getElementById('editProfilePhone');
+        const editGender = document.getElementById('editProfileGender');
+        const editEmail = document.getElementById('editProfileEmail');
+        const editPhoto = document.getElementById('editProfilePhoto');
+
+        if (nameHeader) nameHeader.innerText = user.full_name || 'My Profile';
+        if (emailHeader) emailHeader.innerText = user.email;
+        if (roleBadge) {
+            roleBadge.innerText = user.is_admin ? "🛡️ System Administrator" : "👤 Verified Vault User";
+            roleBadge.className = user.is_admin ? "badge" : "badge approved";
+            if (user.is_admin) {
+                roleBadge.style.background = "#e0e7ff";
+                roleBadge.style.color = "#4338ca";
+            }
+        }
+
+        if (photoDisplay && user.profile_photo) {
+            photoDisplay.src = user.profile_photo;
+        }
+
+        if (editName) editName.value = user.full_name || '';
+        if (editPhone) editPhone.value = user.phone || '';
+        if (editGender) editGender.value = user.gender || '';
+        if (editEmail) editEmail.value = user.email;
+        if (editPhoto) editPhoto.value = user.profile_photo || '';
+    } catch (err) {
+        console.error("Failed to load profile:", err);
+    }
+}
+
+async function saveUserProfile() {
+    const email = localStorage.getItem('user_email');
+    if (!email) return;
+
+    const full_name = document.getElementById('editProfileName')?.value.trim();
+    const phone = document.getElementById('editProfilePhone')?.value.trim();
+    const gender = document.getElementById('editProfileGender')?.value;
+    const profile_photo = document.getElementById('editProfilePhoto')?.value.trim();
+
+    try {
+        showAlert("Saving profile...", "info");
+        const res = await authFetch(`${API_BASE}/profile?user_email=${encodeURIComponent(email)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ full_name, phone, gender, profile_photo })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Failed to update profile");
+
+        showAlert(data.message, "success");
+        loadUserProfile();
+    } catch (err) {
+        showAlert(err.message, "error");
+    }
 }

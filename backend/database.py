@@ -150,9 +150,25 @@ def init_db(override_conn=None):
             email TEXT UNIQUE NOT NULL,
             hashed_password TEXT NOT NULL,
             is_admin BOOLEAN DEFAULT 0,
+            full_name TEXT,
+            phone TEXT,
+            gender TEXT,
+            profile_photo TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """)
+
+    # Ensure profile columns exist in existing deployments
+    for col_def in [
+        ("full_name", "TEXT"),
+        ("phone", "TEXT"),
+        ("gender", "TEXT"),
+        ("profile_photo", "TEXT")
+    ]:
+        try:
+            cursor.execute(f"ALTER TABLE users ADD COLUMN {col_def[0]} {col_def[1]};")
+        except Exception:
+            pass
 
     # 3. Documents Table
     cursor.execute("""

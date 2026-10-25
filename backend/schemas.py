@@ -11,6 +11,15 @@ class UserRegister(BaseModel):
     email: EmailStr
     password: str
     secure_code: str
+    full_name: str = None
+    phone: str = None
+    gender: str = None
+
+class UserProfileUpdate(BaseModel):
+    full_name: str = None
+    phone: str = None
+    gender: str = None
+    profile_photo: str = None
 
 class UserLogin(BaseModel):
     email: EmailStr
