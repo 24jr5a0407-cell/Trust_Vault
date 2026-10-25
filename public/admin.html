@@ -50,9 +50,10 @@
                         </p>
                     </div>
                     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                        <input type="file" id="companyRosterFile" accept=".csv,.txt" style="font-size: 0.85rem; padding: 6px 12px; max-width: 250px; background: white; border-radius: 8px; border: 1px solid #cbd5e1;">
-                        <button onclick="uploadCompanyRoster()" style="padding: 0 16px; height: 38px; font-size: 0.85rem; width: auto !important; background: var(--gradient-teal); box-shadow: 0 2px 8px rgba(13, 148, 136, 0.25);">📤 Import Roster</button>
-                        <button onclick="toggleCompanyRosterModal()" class="btn-secondary" style="padding: 0 14px; height: 38px; font-size: 0.85rem; width: auto !important;">📋 View Roster (<span id="companyRosterCount" style="font-weight: 700; color: #007aff;">0</span>)</button>
+                        <input type="file" id="companyRosterFile" accept=".xlsx,.xls,.csv,.txt" style="font-size: 0.85rem; padding: 6px 12px; max-width: 250px; background: white; border-radius: 8px; border: 1px solid #cbd5e1;">
+                        <button onclick="uploadCompanyRoster()" style="padding: 0 16px; height: 38px; font-size: 0.85rem; width: auto !important; background: var(--gradient-teal); box-shadow: 0 2px 8px rgba(13, 148, 136, 0.25);">📤 Import Excel / CSV Roster</button>
+                        <button onclick="toggleCompanyRosterModal()" class="btn-secondary" style="padding: 0 14px; height: 38px; font-size: 0.85rem; width: auto !important;">📋 Search & View Roster (<span id="companyRosterCount" style="font-weight: 700; color: #007aff;">0</span>)</button>
+                        <a href="company_employees_template.xlsx" download="company_employees_template.xlsx" class="btn-secondary" style="padding: 8px 12px; font-size: 0.82rem; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; color: #0284c7 !important; border-color: #bae6fd !important;">📥 Download Template Excel Sheet</a>
                     </div>
                 </div>
             </div>
@@ -192,9 +193,13 @@
                 <h3 style="margin: 0; font-size: 1.15rem; color: #1e293b;">🏢 Imported Company Employees Roster</h3>
                 <button onclick="toggleCompanyRosterModal()" class="btn-secondary" style="padding: 4px 10px; font-size: 0.85rem; width: auto !important;">✕ Close</button>
             </div>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0;">
-                These are verified company employees. When an access request arrives from any of these email addresses, Trust Vault highlights them with a verified company badge.
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0; margin-bottom: 12px;">
+                These are verified company employees imported from your Excel/CSV sheet. When a user requests access, the admin can only approve them if their email is verified in this roster.
             </p>
+            <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
+                <input type="text" id="rosterSearchInput" placeholder="🔍 Search employee by email, name, or department..." oninput="filterCompanyRoster()" style="padding: 8px 12px; font-size: 0.88rem; flex: 1; border-radius: 8px; border: 1px solid #cbd5e1;">
+                <button onclick="clearCompanyRosterSearch()" class="btn-secondary" style="padding: 8px 14px; font-size: 0.85rem; width: auto !important;">Clear</button>
+            </div>
             <div class="table-responsive" style="flex: 1; overflow-y: auto;">
                 <table>
                     <thead>

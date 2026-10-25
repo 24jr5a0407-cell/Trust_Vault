@@ -122,7 +122,7 @@ let companyEmployeesCache = [];
 async function uploadCompanyRoster() {
     const fileInput = document.getElementById('companyRosterFile');
     if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        showAlert("Please select a .csv or .txt file containing company active users.", "error");
+        showAlert("Please select an Excel sheet (.xlsx, .xls) or CSV file containing company active users.", "error");
         return;
     }
 
@@ -131,7 +131,7 @@ async function uploadCompanyRoster() {
     formData.append('file', file);
 
     try {
-        showAlert("Importing company active users roster...", "info");
+        showAlert("Importing company active users roster from spreadsheet...", "info");
         const res = await authFetch(`${API_BASE}/admin/employees/import`, {
             method: 'POST',
             body: formData
@@ -150,6 +150,27 @@ async function uploadCompanyRoster() {
     }
 }
 
+function renderCompanyRosterTable(employees) {
+    const tbody = document.getElementById('companyRosterTableBody');
+    if (!tbody) return;
+
+    if (!employees || employees.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 20px;">No company employees matched your search.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = employees.map(emp => `
+        <tr>
+            <td><strong>${emp.email}</strong></td>
+            <td>${emp.full_name || '—'}</td>
+            <td><span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 12px; font-size: 0.78rem; font-weight: 600;">${emp.department || 'General'}</span></td>
+            <td>
+                <button onclick="removeCompanyEmployee('${emp.email}')" class="danger" style="padding: 2px 8px; font-size: 0.75rem; width: auto !important;">Remove</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
 async function loadCompanyEmployeesRoster() {
     try {
         const res = await authFetch(`${API_BASE}/admin/employees`);
@@ -159,27 +180,30 @@ async function loadCompanyEmployeesRoster() {
         const countBadge = document.getElementById('companyRosterCount');
         if (countBadge) countBadge.innerText = companyEmployeesCache.length;
 
-        const tbody = document.getElementById('companyRosterTableBody');
-        if (!tbody) return;
-
-        if (companyEmployeesCache.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No company employees imported yet. Choose a CSV/TXT file above.</td></tr>`;
-            return;
-        }
-
-        tbody.innerHTML = companyEmployeesCache.map(emp => `
-            <tr>
-                <td><strong>${emp.email}</strong></td>
-                <td>${emp.full_name || '—'}</td>
-                <td><span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">${emp.department || 'General'}</span></td>
-                <td>
-                    <button onclick="removeCompanyEmployee('${emp.email}')" class="danger" style="padding: 2px 6px; font-size: 0.75rem; width: auto !important;">Remove</button>
-                </td>
-            </tr>
-        `).join('');
+        renderCompanyRosterTable(companyEmployeesCache);
     } catch (err) {
         console.error("Failed to load company employees:", err);
     }
+}
+
+function filterCompanyRoster() {
+    const query = (document.getElementById('rosterSearchInput')?.value || '').toLowerCase().trim();
+    if (!query) {
+        renderCompanyRosterTable(companyEmployeesCache);
+        return;
+    }
+    const filtered = companyEmployeesCache.filter(e => 
+        (e.email && e.email.toLowerCase().includes(query)) ||
+        (e.full_name && e.full_name.toLowerCase().includes(query)) ||
+        (e.department && e.department.toLowerCase().includes(query))
+    );
+    renderCompanyRosterTable(filtered);
+}
+
+function clearCompanyRosterSearch() {
+    const searchInput = document.getElementById('rosterSearchInput');
+    if (searchInput) searchInput.value = '';
+    renderCompanyRosterTable(companyEmployeesCache);
 }
 
 async function removeCompanyEmployee(email) {

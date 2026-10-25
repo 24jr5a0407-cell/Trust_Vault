@@ -3,6 +3,8 @@ from fastapi.responses import Response
 import secrets
 import csv
 import io
+import openpyxl
+import io
 import schemas
 from database import get_db
 from security import get_current_admin
@@ -67,8 +69,25 @@ def approve_or_reject_user(
     secure_code = None
     
     if status_val == "APPROVED":
+        # Strict Organization Validation: If active company employees roster is configured, enforce membership
+        cursor.execute("SELECT COUNT(*) as count FROM company_employees")
+        roster_count_row = cursor.fetchone()
+        roster_count = roster_count_row["count"] if isinstance(roster_count_row, dict) else (roster_count_row[0] if roster_count_row else 0)
+
+        is_root_admin = action.email.lower() == "guardfilespace@gmail.com"
+        
+        if roster_count > 0 and not is_root_admin:
+            cursor.execute("SELECT id, full_name, department FROM company_employees WHERE LOWER(email) = LOWER(?)", (action.email,))
+            company_emp = cursor.fetchone()
+            if not company_emp:
+                logger.warning(f"Admin approval blocked: '{action.email}' is NOT in active company employees roster.")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Approval rejected: '{action.email}' does not belong to the imported Company Employees roster. Only verified company employees can be approved."
+                )
+
         secure_code = f"TV-{secrets.token_hex(3).upper()}"
-        logger.info(f"Generated secure registration code for '{action.email}': {secure_code}")
+        logger.info(f"Generated secure registration code for verified company employee '{action.email}': {secure_code}")
         
         # Dispatch Security Code directly to the user's registered email
         subject = "Trust Vault - Your Whitelist Access Request Has Been Approved!"
@@ -121,110 +140,153 @@ async def import_company_employees(
     db = Depends(get_db)
 ):
     """
-    Imports active company employees roster from a CSV or TXT file.
-    Accepts CSV format with columns: email, name/full_name (optional), department (optional)
-    or simple text file with one email per line.
+    Imports active company employees roster from an Excel (.xlsx, .xls), CSV, or TXT file.
+    Accepts spreadsheet / CSV with columns: Email, Name / Full Name, Department.
     """
     logger.info(f"Admin '{current_admin['email']}' importing company active users file '{file.filename}'")
     filename = (file.filename or "").lower()
-    if not (filename.endswith('.csv') or filename.endswith('.txt')):
-        raise HTTPException(status_code=400, detail="Only CSV or TXT files are accepted for employee roster import.")
+    valid_exts = ('.xlsx', '.xls', '.csv', '.txt')
+    if not any(filename.endswith(ext) for ext in valid_exts):
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid file format. Please upload an Excel sheet (.xlsx, .xls), CSV (.csv), or TXT file."
+        )
 
     content_bytes = await file.read()
-    if len(content_bytes) > 5 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="File too large. Maximum roster size is 5MB.")
+    if len(content_bytes) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large. Maximum roster size is 10MB.")
 
-    try:
+    extracted_records = []
+
+    if filename.endswith('.xlsx') or filename.endswith('.xls'):
+        try:
+            wb = openpyxl.load_workbook(io.BytesIO(content_bytes), data_only=True)
+            ws = wb.active
+            rows = list(ws.iter_rows(values_only=True))
+            if not rows:
+                raise HTTPException(status_code=400, detail="The Excel sheet is empty.")
+
+            first_row = [str(cell).strip().lower() if cell is not None else "" for cell in rows[0]]
+            email_idx = -1
+            name_idx = -1
+            dept_idx = -1
+
+            for i, h in enumerate(first_row):
+                if "email" in h or "mail" in h:
+                    email_idx = i
+                elif "name" in h:
+                    name_idx = i
+                elif "department" in h or "dept" in h or "role" in h:
+                    dept_idx = i
+
+            data_rows = rows[1:] if email_idx != -1 else rows
+            if email_idx == -1:
+                # Default assume col 0 is Name or Email
+                email_idx = 1 if len(first_row) > 1 and "@" in str(rows[0][1] or "") else 0
+                name_idx = 0 if email_idx == 1 else (1 if len(first_row) > 1 else -1)
+
+            for r in data_rows:
+                if not r or len(r) <= email_idx or r[email_idx] is None:
+                    continue
+                email_str = str(r[email_idx]).strip().lower()
+                if not email_str or "@" not in email_str or "." not in email_str:
+                    continue
+                name_str = str(r[name_idx]).strip() if name_idx != -1 and len(r) > name_idx and r[name_idx] is not None else ""
+                dept_str = str(r[dept_idx]).strip() if dept_idx != -1 and len(r) > dept_idx and r[dept_idx] is not None else "General"
+                extracted_records.append((email_str, name_str, dept_str))
+        except HTTPException:
+            raise
+        except Exception as xl_err:
+            logger.error(f"Excel parsing error: {xl_err}")
+            raise HTTPException(status_code=400, detail=f"Failed to parse Excel sheet: {str(xl_err)}")
+
+    elif filename.endswith('.csv'):
+        try:
+            text = content_bytes.decode('utf-8', errors='replace')
+            lines = [line.strip() for line in text.splitlines() if line.strip()]
+            reader = csv.reader(lines)
+            rows = list(reader)
+            if not rows:
+                raise HTTPException(status_code=400, detail="CSV file is empty.")
+
+            header_lower = [col.strip().lower() for col in rows[0]]
+            email_col = 0
+            name_col = -1
+            dept_col = -1
+
+            if any("email" in h for h in header_lower):
+                for i, h in enumerate(header_lower):
+                    if "email" in h or "mail" in h:
+                        email_col = i
+                    elif "name" in h:
+                        name_col = i
+                    elif "department" in h or "dept" in h:
+                        dept_col = i
+                data_rows = rows[1:]
+            else:
+                data_rows = rows
+
+            for r in data_rows:
+                if not r or len(r) <= email_col:
+                    continue
+                email_str = r[email_col].strip().lower()
+                if not email_str or "@" not in email_str:
+                    continue
+                name_str = r[name_col].strip() if name_col != -1 and len(r) > name_col else ""
+                dept_str = r[dept_col].strip() if dept_col != -1 and len(r) > dept_col else "General"
+                extracted_records.append((email_str, name_str, dept_str))
+        except Exception as csv_err:
+            raise HTTPException(status_code=400, detail=f"Failed to parse CSV file: {str(csv_err)}")
+    else:
+        # Plain text
         text = content_bytes.decode('utf-8', errors='replace')
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to decode file text: {str(e)}")
+        for line in text.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            parts = [p.strip() for p in line.split(",") if p.strip()]
+            email_str = parts[0].lower() if parts else ""
+            if not email_str or "@" not in email_str:
+                continue
+            name_str = parts[1] if len(parts) > 1 else ""
+            dept_str = parts[2] if len(parts) > 2 else "General"
+            extracted_records.append((email_str, name_str, dept_str))
 
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    if not lines:
-        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+    if not extracted_records:
+        raise HTTPException(
+            status_code=400, 
+            detail="No valid employee email records found in the uploaded file. Please ensure columns include Email."
+        )
 
     cursor = db.cursor()
     imported_count = 0
     updated_count = 0
 
-    if filename.endswith('.csv'):
-        reader = csv.reader(lines)
-        first_row = next(reader, None)
-        if not first_row:
-            raise HTTPException(status_code=400, detail="CSV file contains no data.")
-
-        # Check if first row is a header
-        header_lower = [col.strip().lower() for col in first_row]
-        email_col = 0
-        name_col = -1
-        dept_col = -1
-
-        if "email" in header_lower:
-            email_col = header_lower.index("email")
-            if "name" in header_lower:
-                name_col = header_lower.index("name")
-            elif "full_name" in header_lower:
-                name_col = header_lower.index("full_name")
-            if "department" in header_lower:
-                dept_col = header_lower.index("department")
-            rows_to_process = list(reader)
+    for email_val, name_val, dept_val in extracted_records:
+        cursor.execute("SELECT id FROM company_employees WHERE LOWER(email) = ?", (email_val,))
+        existing = cursor.fetchone()
+        if existing:
+            cursor.execute("""
+                UPDATE company_employees 
+                SET full_name = COALESCE(NULLIF(?, ''), full_name),
+                    department = COALESCE(NULLIF(?, ''), department)
+                WHERE id = ?
+            """, (name_val, dept_val, existing["id"]))
+            updated_count += 1
         else:
-            # First row is data
-            rows_to_process = [first_row] + list(reader)
-
-        for row in rows_to_process:
-            if not row or len(row) <= email_col:
-                continue
-            email_val = row[email_col].strip().lower()
-            if not email_val or "@" not in email_val:
-                continue
-
-            name_val = row[name_col].strip() if name_col != -1 and len(row) > name_col else ""
-            dept_val = row[dept_col].strip() if dept_col != -1 and len(row) > dept_col else "General"
-
-            cursor.execute("SELECT id FROM company_employees WHERE LOWER(email) = ?", (email_val,))
-            existing = cursor.fetchone()
-            if existing:
-                cursor.execute("""
-                    UPDATE company_employees 
-                    SET full_name = COALESCE(NULLIF(?, ''), full_name),
-                        department = COALESCE(NULLIF(?, ''), department)
-                    WHERE id = ?
-                """, (name_val, dept_val, existing["id"]))
-                updated_count += 1
-            else:
-                cursor.execute("""
-                    INSERT INTO company_employees (email, full_name, department)
-                    VALUES (?, ?, ?)
-                """, (email_val, name_val, dept_val))
-                imported_count += 1
-    else:
-        # Plain text: one email per line
-        for line in lines:
-            parts = [p.strip() for p in line.split(",") if p.strip()]
-            email_val = parts[0].lower() if parts else ""
-            if not email_val or "@" not in email_val:
-                continue
-            name_val = parts[1] if len(parts) > 1 else ""
-            dept_val = parts[2] if len(parts) > 2 else "General"
-
-            cursor.execute("SELECT id FROM company_employees WHERE LOWER(email) = ?", (email_val,))
-            existing = cursor.fetchone()
-            if existing:
-                updated_count += 1
-            else:
-                cursor.execute("""
-                    INSERT INTO company_employees (email, full_name, department)
-                    VALUES (?, ?, ?)
-                """, (email_val, name_val, dept_val))
-                imported_count += 1
+            cursor.execute("""
+                INSERT INTO company_employees (email, full_name, department)
+                VALUES (?, ?, ?)
+            """, (email_val, name_val, dept_val))
+            imported_count += 1
 
     db.commit()
     logger.info(f"Imported {imported_count} new employees, updated {updated_count} existing records.")
     return {
-        "message": f"Successfully processed company roster: {imported_count} imported, {updated_count} updated.",
+        "message": f"Successfully imported {imported_count} new employees ({updated_count} updated) into Company Roster!",
         "imported": imported_count,
-        "updated": updated_count
+        "updated": updated_count,
+        "total_roster": imported_count + updated_count
     }
 
 
