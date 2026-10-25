@@ -59,21 +59,40 @@ function renderVaultTable(docs) {
     const tbody = document.getElementById('documentTableBody');
     if (!tbody) return;
     if (!docs || docs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No matching documents found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No accessible documents found. You have not uploaded any files, and no owner has granted you view permissions yet.</td></tr>`;
         return;
     }
-    tbody.innerHTML = docs.map(doc => `
-        <tr>
-            <td><strong>#${doc.id}</strong></td>
-            <td>${doc.filename}</td>
-            <td>${doc.owner_email}</td>
-            <td>${new Date(doc.created_at).toLocaleString()}</td>
-            <td>
-                <button onclick="viewDoc(${doc.id})" class="btn-secondary" style="padding: 6px 12px; font-size: 0.82rem; width: auto !important;">👁️ View</button>
-                <button onclick="showDownloadDisabledWarning()" class="btn-download-vault" style="padding: 6px 12px; font-size: 0.82rem; width: auto !important;">⬇️ Download</button>
-            </td>
-        </tr>
-    `).join('');
+
+    const currentEmail = (localStorage.getItem('user_email') || '').toLowerCase().trim();
+
+    tbody.innerHTML = docs.map(doc => {
+        const isOwner = (doc.owner_email || '').toLowerCase().trim() === currentEmail;
+        
+        let roleBadge = '';
+        let downloadBtn = '';
+
+        if (isOwner) {
+            roleBadge = `<span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px; font-size: 0.76rem; font-weight: 700; background: #e0e7ff; color: #4338ca;">👑 Document Owner</span>`;
+            downloadBtn = `<button onclick="downloadOfficialDoc(${doc.id})" class="btn-secondary" style="padding: 6px 12px; font-size: 0.82rem; width: auto !important; color: #0284c7 !important; border-color: #bae6fd !important;">⬇️ Download</button>`;
+        } else {
+            roleBadge = `<span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px; font-size: 0.76rem; font-weight: 700; background: #dcfce7; color: #15803d;">👁️ Granted Viewer</span>`;
+            downloadBtn = `<button onclick="showDownloadDisabledWarning()" class="btn-download-vault" style="padding: 6px 12px; font-size: 0.82rem; width: auto !important;">🔒 Download Blocked</button>`;
+        }
+
+        return `
+            <tr>
+                <td><strong>#${doc.id}</strong></td>
+                <td>${doc.filename}</td>
+                <td>${doc.owner_email}</td>
+                <td>${roleBadge}</td>
+                <td>${new Date(doc.created_at).toLocaleString()}</td>
+                <td>
+                    <button onclick="viewDoc(${doc.id})" class="btn-secondary" style="padding: 6px 12px; font-size: 0.82rem; width: auto !important;">👁️ View</button>
+                    ${downloadBtn}
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
 function filterVaultDocuments() {
