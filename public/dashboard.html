@@ -38,12 +38,18 @@
         <!-- TAB 1: MY VAULT (Upload & Managed Docs) -->
         <div id="sectionVault" class="dashboard-section">
             <div class="card">
-                <h3>Upload New Document</h3>
-                <div class="flex-row">
-                    <input type="file" id="uploadFile" accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv,.jpg,.jpeg,.png,.webp" style="background: white; flex: 1;">
-                    <button onclick="uploadDocument()">Upload File</button>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                    <span style="font-size: 1.3rem;">📤</span>
+                    <h3 style="margin: 0;">Upload Secure Document</h3>
                 </div>
-                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">Allowed formats: PDF, DOCX, XLSX, PPTX, TXT, CSV, JPG, PNG, WEBP (Max 25MB). Executables and scripts are blocked.</p>
+                <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 16px;">
+                    Upload documents to your corporate vault. Documents are validated with triple-layer magic byte inspection and stored securely.
+                </p>
+                <div class="upload-dropzone">
+                    <input type="file" id="uploadFile" accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv,.jpg,.jpeg,.png,.webp">
+                    <button onclick="uploadDocument()" style="width: auto !important; padding: 0 24px;">Upload Document</button>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 10px;">Allowed formats: PDF, DOCX, XLSX, PPTX, TXT, CSV, JPG, PNG, WEBP (Max 25MB). Executables and scripts are blocked.</p>
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
@@ -157,13 +163,18 @@
         <!-- TAB 4: PERSONAL VAULT -->
         <div id="sectionPersonal" class="dashboard-section" style="display: none;">
             <div class="card">
-                <h3>🔒 Private Personal Vault</h3>
-                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">Upload your personal files here. They are completely private—no other user or admin can see them. Deletions require no admin approval and are logged securely by document ID.</p>
-                <div class="flex-row">
-                    <input type="file" id="uploadPersonalFile" accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv,.jpg,.jpeg,.png,.webp" style="background: white; flex: 1;">
-                    <button onclick="uploadPersonalDocument()" style="background: #0d9488;">Upload Personal Doc</button>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                    <span style="font-size: 1.3rem;">🔐</span>
+                    <h3 style="margin: 0;">Private Personal Vault</h3>
                 </div>
-                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">Allowed formats: PDF, DOCX, XLSX, PPTX, TXT, CSV, JPG, PNG, WEBP (Max 25MB). Private and encrypted.</p>
+                <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 16px;">
+                    Upload your private personal files here. They are completely confidential—no other user or administrator can inspect or search them.
+                </p>
+                <div class="upload-dropzone">
+                    <input type="file" id="uploadPersonalFile" accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv,.jpg,.jpeg,.png,.webp">
+                    <button onclick="uploadPersonalDocument()" style="background: var(--gradient-teal); box-shadow: 0 2px 8px rgba(13, 148, 136, 0.25); width: auto !important; padding: 0 24px;">Upload Personal Doc</button>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 10px;">Allowed formats: PDF, DOCX, XLSX, PPTX, TXT, CSV, JPG, PNG, WEBP (Max 25MB). Private and encrypted.</p>
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 25px; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
