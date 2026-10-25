@@ -552,26 +552,70 @@ async function loadUserProfile() {
     }
 }
 
+function updateProfilePhotoPreview(url) {
+    const photoDisplay = document.getElementById('profilePhotoDisplay');
+    if (!photoDisplay) return;
+    if (url && url.trim().length > 5) {
+        photoDisplay.src = url.trim();
+    } else {
+        photoDisplay.src = 'logo-icon.png';
+    }
+}
+
+function handleProfilePhotoSelected(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        showAlert("Please select a valid image file (PNG, JPG, WebP).", "error");
+        return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+        showAlert("Image size is too large. Please select an image under 2MB.", "error");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const base64Data = e.target.result;
+        const photoDisplay = document.getElementById('profilePhotoDisplay');
+        const editPhoto = document.getElementById('editProfilePhoto');
+        if (photoDisplay) photoDisplay.src = base64Data;
+        if (editPhoto) editPhoto.value = base64Data;
+        showAlert("Photo loaded! Click 'Save Profile Changes' to update your account.", "info");
+    };
+    reader.readAsDataURL(file);
+}
+
 async function saveUserProfile() {
     const email = localStorage.getItem('user_email');
-    if (!email) return;
+    if (!email) {
+        showAlert("No logged-in user found. Please re-authenticate.", "error");
+        return;
+    }
 
-    const full_name = document.getElementById('editProfileName')?.value.trim();
-    const phone = document.getElementById('editProfilePhone')?.value.trim();
-    const gender = document.getElementById('editProfileGender')?.value;
-    const profile_photo = document.getElementById('editProfilePhoto')?.value.trim();
+    const full_name = (document.getElementById('editProfileName')?.value || '').trim();
+    const phone = (document.getElementById('editProfilePhone')?.value || '').trim();
+    const gender = (document.getElementById('editProfileGender')?.value || '').trim();
+    const profile_photo = (document.getElementById('editProfilePhoto')?.value || '').trim();
 
     try {
-        showAlert("Saving profile...", "info");
+        showAlert("Saving profile changes...", "info");
         const res = await authFetch(`${API_BASE}/profile?user_email=${encodeURIComponent(email)}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ full_name, phone, gender, profile_photo })
+            body: JSON.stringify({ 
+                full_name: full_name || null, 
+                phone: phone || null, 
+                gender: gender || null, 
+                profile_photo: profile_photo || null 
+            })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || "Failed to update profile");
 
-        showAlert(data.message, "success");
+        showAlert(data.message || "Profile updated successfully!", "success");
         loadUserProfile();
     } catch (err) {
         showAlert(err.message, "error");

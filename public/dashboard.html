@@ -212,8 +212,9 @@
                 </div>
                 
                 <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border-light); flex-wrap: wrap;">
-                    <div style="position: relative;">
-                        <img id="profilePhotoDisplay" src="logo-icon.png" alt="Profile Avatar" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--brand-primary); box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    <div style="position: relative; cursor: pointer;" onclick="document.getElementById('profilePhotoInput').click()" title="Click to choose profile picture">
+                        <img id="profilePhotoDisplay" src="logo-icon.png" alt="Profile Avatar" style="width: 86px; height: 86px; border-radius: 50%; object-fit: cover; border: 3px solid var(--brand-primary); box-shadow: 0 4px 12px rgba(0,0,0,0.12);">
+                        <span style="position: absolute; bottom: 0; right: 0; background: #007aff; color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; border: 2px solid white;">📷</span>
                     </div>
                     <div>
                         <h4 id="profileNameHeader" style="margin: 0 0 4px 0; font-size: 1.15rem; color: #0f172a;">User Profile</h4>
@@ -222,9 +223,15 @@
                     </div>
                 </div>
 
+                <!-- Hidden direct file picker for profile picture -->
+                <input type="file" id="profilePhotoInput" accept="image/*" style="display: none;" onchange="handleProfilePhotoSelected(event)">
+
                 <div class="form-group">
-                    <label>Profile Photo URL or Direct Image Link</label>
-                    <input type="text" id="editProfilePhoto" placeholder="https://example.com/photo.jpg or leave blank">
+                    <label>Profile Picture</label>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('profilePhotoInput').click()" style="width: auto !important; padding: 0 16px;">📁 Choose Image File</button>
+                        <input type="text" id="editProfilePhoto" placeholder="Or paste image URL (https://...)" style="flex: 1;" oninput="updateProfilePhotoPreview(this.value)">
+                    </div>
                 </div>
 
                 <div class="form-group">
