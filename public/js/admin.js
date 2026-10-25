@@ -237,7 +237,7 @@ async function removeUser(email) {
     });
 }
 
-// --- 3. DOCUMENT OVERSIGHT ---
+// --- 3. DOCUMENT OVERSIGHT & ADMINISTRATIVE PRIVILEGES ---
 let adminDocsCache = [];
 
 function renderAdminDocsTable(docs) {
@@ -251,13 +251,73 @@ function renderAdminDocsTable(docs) {
         <tr>
             <td><strong>#${d.id}</strong></td>
             <td>${d.filename}</td>
-            <td>${d.owner_email}</td>
+            <td><strong>${d.owner_email}</strong></td>
             <td>${new Date(d.created_at).toLocaleString()}</td>
             <td>
-                <button onclick="viewDoc(${d.id})" class="btn-secondary" style="padding: 4px 8px; font-size: 0.8rem; width: auto !important;">View</button>
+                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                    <button onclick="viewDoc(${d.id})" class="btn-secondary" style="padding: 4px 10px; font-size: 0.8rem; width: auto !important;">👁️ View</button>
+                    <button onclick="adminDownloadDoc(${d.id})" class="btn-secondary" style="padding: 4px 10px; font-size: 0.8rem; width: auto !important; color: #0284c7 !important; border-color: #bae6fd !important;">⬇️ Download</button>
+                    <button onclick="adminEditDoc(${d.id}, '${d.filename.replace(/'/g, "\\'")}')" class="btn-secondary" style="padding: 4px 10px; font-size: 0.8rem; width: auto !important; color: #d97706 !important; border-color: #fde68a !important;">✏️ Edit</button>
+                    <button onclick="adminDeleteDoc(${d.id}, '${d.filename.replace(/'/g, "\\'")}')" class="danger" style="padding: 4px 10px; font-size: 0.8rem; width: auto !important;">🗑️ Delete</button>
+                </div>
             </td>
         </tr>
     `).join('');
+}
+
+function adminDownloadDoc(id) {
+    const email = localStorage.getItem('user_email');
+    const token = localStorage.getItem('jwt_token') || '';
+    const downloadUrl = `${API_BASE}/documents/${id}/download?user_email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.setAttribute('download', '');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+function adminEditDoc(id, currentName) {
+    const newName = prompt(`Enter new filename for Document #${id}:`, currentName);
+    if (!newName || newName.trim() === '' || newName === currentName) return;
+    
+    const email = localStorage.getItem('user_email');
+    authFetch(`${API_BASE}/documents/${id}?user_email=${encodeURIComponent(email)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: newName.trim() })
+    })
+    .then(async res => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed to edit document');
+        showAlert(`Document #${id} renamed to '${newName.trim()}'`, 'success');
+        loadAdminDocuments();
+    })
+    .catch(err => showAlert(err.message, 'error'));
+}
+
+function adminDeleteDoc(id, filename) {
+    showAppModal({
+        title: "Delete Document (Administrator)",
+        message: `Permanently delete document #${id} ('${filename}')? This action is recorded in the immutable audit ledger.`,
+        okText: "Delete",
+        cancelText: "Cancel",
+        onOk: async () => {
+            const email = localStorage.getItem('user_email');
+            try {
+                const res = await authFetch(`${API_BASE}/documents/${id}?user_email=${encodeURIComponent(email)}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Delete failed');
+                showAlert(data.message, 'success');
+                loadAdminDocuments();
+                loadAdminLedger();
+            } catch (err) {
+                showAlert(err.message, 'error');
+            }
+        }
+    });
 }
 
 function filterAdminDocs() {
