@@ -189,9 +189,19 @@ def init_db(override_conn=None):
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             document_id INTEGER NOT NULL,
             user_email TEXT NOT NULL,
+            can_view INTEGER DEFAULT 1,
+            can_download INTEGER DEFAULT 0,
+            can_edit INTEGER DEFAULT 0,
             FOREIGN KEY (document_id) REFERENCES documents (id) ON DELETE CASCADE
         );
     """)
+
+    # Ensure granular permission columns exist in existing deployments
+    for perm_col in [("can_view", "INTEGER DEFAULT 1"), ("can_download", "INTEGER DEFAULT 0"), ("can_edit", "INTEGER DEFAULT 0")]:
+        try:
+            cursor.execute(f"ALTER TABLE document_access ADD COLUMN {perm_col[0]} {perm_col[1]};")
+        except Exception:
+            pass
 
     # 5. Document Ledger Table
     cursor.execute("""

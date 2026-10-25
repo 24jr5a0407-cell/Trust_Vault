@@ -97,12 +97,15 @@ def get_user_documents(
     logger.info(f"Fetching accessible documents for user: {effective_email} (search={search})")
     cursor = db.cursor()
     query = """
-        SELECT DISTINCT d.id, d.filename, d.owner_email, d.created_at 
+        SELECT DISTINCT d.id, d.filename, d.owner_email, d.created_at,
+               COALESCE(da.can_view, 1) as can_view,
+               COALESCE(da.can_download, 0) as can_download,
+               COALESCE(da.can_edit, 0) as can_edit
         FROM documents d
-        LEFT JOIN document_access da ON d.id = da.document_id
+        LEFT JOIN document_access da ON d.id = da.document_id AND da.user_email = ?
         WHERE d.is_personal = 0 AND (d.owner_email = ? OR da.user_email = ?)
     """
-    params = [effective_email, effective_email]
+    params = [effective_email, effective_email, effective_email]
     
     if search:
         term = search.strip()
@@ -205,8 +208,15 @@ def download_document(
         
     is_owner = (doc["owner_email"] == effective_email)
     
-    if not is_admin and not is_owner:
-        logger.warning(f"Download forbidden: User '{effective_email}' is neither owner nor admin of doc {document_id}")
+    can_download = is_admin or is_owner
+    if not can_download:
+        cursor.execute("SELECT can_download FROM document_access WHERE document_id = ? AND user_email = ?", (document_id, effective_email))
+        acc_row = cursor.fetchone()
+        if acc_row and acc_row["can_download"]:
+            can_download = True
+            
+    if not can_download:
+        logger.warning(f"Download forbidden: User '{effective_email}' does not have download permission on doc {document_id}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, 
             detail="Download restricted. You have read-only permissions and cannot download this file."
@@ -260,9 +270,16 @@ def edit_document(
         
     is_owner = (doc["owner_email"] == effective_email)
     
-    if not is_admin and not is_owner:
+    can_edit = is_admin or is_owner
+    if not can_edit:
+        cursor.execute("SELECT can_edit FROM document_access WHERE document_id = ? AND user_email = ?", (document_id, effective_email))
+        acc_row = cursor.fetchone()
+        if acc_row and acc_row["can_edit"]:
+            can_edit = True
+            
+    if not can_edit:
         logger.warning(f"Edit permission denied for user '{effective_email}' on doc {document_id}")
-        raise HTTPException(status_code=403, detail="Permission denied. Only the owner or admin can edit this document.")
+        raise HTTPException(status_code=403, detail="Permission denied. You do not have edit permissions for this document.")
         
     cursor.execute("UPDATE documents SET filename = ? WHERE id = ?", (payload.filename, document_id))
     cursor.execute("INSERT INTO document_logs (document_id, user_email, action) VALUES (?, ?, ?)", (document_id, effective_email, f"RENAMED_TO_{payload.filename}"))
@@ -494,16 +511,24 @@ def get_incoming_requests(
     
     if is_admin:
         cursor.execute("""
-            SELECT r.id, r.document_id, d.filename, r.user_email, d.owner_email, r.status, r.created_at
+            SELECT r.id, r.document_id, d.filename, r.user_email, d.owner_email, r.status, r.created_at,
+                   COALESCE(da.can_view, 1) as can_view,
+                   COALESCE(da.can_download, 0) as can_download,
+                   COALESCE(da.can_edit, 0) as can_edit
             FROM document_requests r
             JOIN documents d ON r.document_id = d.id
+            LEFT JOIN document_access da ON r.document_id = da.document_id AND r.user_email = da.user_email
             ORDER BY r.created_at DESC
         """)
     else:
         cursor.execute("""
-            SELECT r.id, r.document_id, d.filename, r.user_email, d.owner_email, r.status, r.created_at
+            SELECT r.id, r.document_id, d.filename, r.user_email, d.owner_email, r.status, r.created_at,
+                   COALESCE(da.can_view, 1) as can_view,
+                   COALESCE(da.can_download, 0) as can_download,
+                   COALESCE(da.can_edit, 0) as can_edit
             FROM document_requests r
             JOIN documents d ON r.document_id = d.id
+            LEFT JOIN document_access da ON r.document_id = da.document_id AND r.user_email = da.user_email
             WHERE d.owner_email = ?
             ORDER BY r.created_at DESC
         """, (effective_email,))
@@ -543,17 +568,31 @@ def handle_request_action(
     new_status = payload.status.upper()
     cursor.execute("UPDATE document_requests SET status = ? WHERE id = ?", (new_status, request_id))
     
+    can_view_val = 1 if payload.can_view else 0
+    can_download_val = 1 if payload.can_download else 0
+    can_edit_val = 1 if payload.can_edit else 0
+
     if new_status == "APPROVED":
         cursor.execute("SELECT * FROM document_access WHERE document_id = ? AND user_email = ?", (req["document_id"], req["user_email"]))
-        if not cursor.fetchone():
-            cursor.execute("INSERT INTO document_access (document_id, user_email) VALUES (?, ?)", (req["document_id"], req["user_email"]))
+        existing_acc = cursor.fetchone()
+        if not existing_acc:
+            cursor.execute("""
+                INSERT INTO document_access (document_id, user_email, can_view, can_download, can_edit) 
+                VALUES (?, ?, ?, ?, ?)
+            """, (req["document_id"], req["user_email"], can_view_val, can_download_val, can_edit_val))
+        else:
+            cursor.execute("""
+                UPDATE document_access 
+                SET can_view = ?, can_download = ?, can_edit = ?
+                WHERE document_id = ? AND user_email = ?
+            """, (can_view_val, can_download_val, can_edit_val, req["document_id"], req["user_email"]))
         cursor.execute("INSERT INTO document_logs (document_id, user_email, action) VALUES (?, ?, ?)", (req["document_id"], actor_email, f"APPROVED_ACCESS_FOR_{req['user_email']}"))
     elif new_status in ["REJECTED", "REVOKED"]:
         cursor.execute("DELETE FROM document_access WHERE document_id = ? AND user_email = ?", (req["document_id"], req["user_email"]))
         cursor.execute("INSERT INTO document_logs (document_id, user_email, action) VALUES (?, ?, ?)", (req["document_id"], actor_email, f"{new_status}_ACCESS_FOR_{req['user_email']}"))
         
     db.commit()
-    logger.info(f"Request {request_id} updated to status '{new_status}' successfully.")
+    logger.info(f"Request {request_id} updated to status '{new_status}' (view={can_view_val}, download={can_download_val}, edit={can_edit_val}) successfully.")
     return {"message": f"Request status updated to {new_status} successfully."}
 
 

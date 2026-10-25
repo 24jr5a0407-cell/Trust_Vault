@@ -405,13 +405,68 @@ async function loadIncomingRequests() {
 
         tbody.innerHTML = reqs.map(r => {
             const currentStatus = r.status.toUpperCase();
-            const actionSelect = `
-                <select onchange="handleAdminPermissionChange(${r.id}, ${r.document_id}, '${r.user_email}', this.value)" style="height: 32px; padding: 2px 8px; font-size: 0.82rem; border-radius: 6px; border: 1px solid #cbd5e1; background: white; font-weight: 600;">
-                    <option value="APPROVED" ${currentStatus === 'APPROVED' ? 'selected' : ''}>✅ Granted Access (Approved)</option>
-                    <option value="REJECTED" ${currentStatus === 'REJECTED' ? 'selected' : ''}>❌ Rejected</option>
-                    <option value="REVOKED" ${currentStatus === 'REVOKED' ? 'selected' : ''}>🚫 Revoked</option>
-                    <option value="PENDING" ${currentStatus === 'PENDING' ? 'selected' : ''}>⏳ Pending Review</option>
-                </select>
+            const isApproved = currentStatus === 'APPROVED';
+
+            const canViewChecked = r.can_view ? 'checked' : '';
+            const canDownloadChecked = r.can_download ? 'checked' : '';
+            const canEditChecked = r.can_edit ? 'checked' : '';
+
+            const permDropdown = `
+                <div class="perm-dropdown" id="permDropdown_${r.id}">
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <button onclick="togglePermMenu(${r.id})" class="btn-secondary" style="padding: 4px 10px; font-size: 0.8rem; width: auto !important; border-radius: 8px;">
+                            ⚙️ Permissions ▾
+                        </button>
+                        ${isApproved ? `
+                            <button onclick="quickUpdateStatus(${r.id}, 'REVOKED')" class="danger" style="padding: 4px 8px; font-size: 0.78rem; width: auto !important;">
+                                Revoke
+                            </button>
+                        ` : `
+                            <button onclick="quickUpdateStatus(${r.id}, 'APPROVED')" style="background: #22c55e; padding: 4px 8px; font-size: 0.78rem; width: auto !important;">
+                                Approve
+                            </button>
+                        `}
+                    </div>
+
+                    <div class="perm-menu" id="permMenu_${r.id}">
+                        <div style="font-weight: 700; font-size: 0.85rem; color: #0f172a; margin-bottom: 8px;">
+                            Access Permissions (#${r.id})
+                        </div>
+
+                        <div class="perm-row">
+                            <span style="font-size: 0.84rem; color: #334155;">👁️ View (Read)</span>
+                            <label class="ios-switch">
+                                <input type="checkbox" id="permView_${r.id}" ${canViewChecked}>
+                                <span class="ios-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="perm-row">
+                            <span style="font-size: 0.84rem; color: #334155;">⬇️ Download</span>
+                            <label class="ios-switch">
+                                <input type="checkbox" id="permDownload_${r.id}" ${canDownloadChecked}>
+                                <span class="ios-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="perm-row">
+                            <span style="font-size: 0.84rem; color: #334155;">✏️ Edit (Rename)</span>
+                            <label class="ios-switch">
+                                <input type="checkbox" id="permEdit_${r.id}" ${canEditChecked}>
+                                <span class="ios-slider"></span>
+                            </label>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; gap: 6px; margin-top: 10px;">
+                            <button onclick="applyPermissions(${r.id}, 'APPROVED')" style="background: #007aff; padding: 0 10px; height: 30px; font-size: 0.76rem; flex: 1;">
+                                Save & Grant
+                            </button>
+                            <button onclick="applyPermissions(${r.id}, 'REVOKED')" class="danger" style="padding: 0 8px; height: 30px; font-size: 0.76rem;">
+                                Revoke
+                            </button>
+                        </div>
+                    </div>
+                </div>
             `;
 
             return `
@@ -421,30 +476,65 @@ async function loadIncomingRequests() {
                     <td><strong>${r.user_email}</strong></td>
                     <td>${r.owner_email}</td>
                     <td><span class="badge ${r.status.toLowerCase()}">${r.status}</span></td>
-                    <td>${actionSelect}</td>
+                    <td>${permDropdown}</td>
                 </tr>
             `;
         }).join('');
     } catch (err) { console.error(err); }
 }
 
-async function handleAdminPermissionChange(requestId, docId, targetEmail, newStatus) {
+function togglePermMenu(reqId) {
+    document.querySelectorAll('.perm-menu').forEach(m => {
+        if (m.id !== `permMenu_${reqId}`) m.classList.remove('open');
+    });
+    const menu = document.getElementById(`permMenu_${reqId}`);
+    if (menu) menu.classList.toggle('open');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.perm-dropdown')) {
+        document.querySelectorAll('.perm-menu').forEach(m => m.classList.remove('open'));
+    }
+});
+
+async function quickUpdateStatus(reqId, status) {
     const email = localStorage.getItem('user_email');
     try {
-        showAlert(`Updating access permission to ${newStatus}...`, 'info');
-        const res = await authFetch(`${API_BASE}/requests/manage/${requestId}?reviewer_email=${encodeURIComponent(email)}`, {
+        const res = await authFetch(`${API_BASE}/requests/manage/${reqId}?reviewer_email=${encodeURIComponent(email)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus, actor_email: email })
+            body: JSON.stringify({ status: status, actor_email: email, can_view: true, can_download: false, can_edit: false })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail);
+        showAlert(data.message, 'success');
+        loadIncomingRequests();
+    } catch (err) {
+        showAlert(err.message, 'error');
+    }
+}
+
+async function applyPermissions(reqId, status) {
+    const email = localStorage.getItem('user_email');
+    const can_view = document.getElementById(`permView_${reqId}`)?.checked || false;
+    const can_download = document.getElementById(`permDownload_${reqId}`)?.checked || false;
+    const can_edit = document.getElementById(`permEdit_${reqId}`)?.checked || false;
+
+    try {
+        showAlert("Updating access permissions...", "info");
+        const res = await authFetch(`${API_BASE}/requests/manage/${reqId}?reviewer_email=${encodeURIComponent(email)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: status, actor_email: email, can_view, can_download, can_edit })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail);
 
-        showAlert(data.message || `Access updated to ${newStatus}`, 'success');
+        showAlert(data.message || "Permissions updated successfully", "success");
         loadIncomingRequests();
     } catch (err) {
         showAlert(err.message, 'error');
-        loadIncomingRequests();
     }
 }
 

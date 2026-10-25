@@ -47,8 +47,14 @@ class DocumentUpdate(BaseModel):
 class RequestActionPayload(BaseModel):
     status: str  # APPROVED, REJECTED, REVOKED
     actor_email: str
+    can_view: bool = True
+    can_download: bool = False
+    can_edit: bool = False
 
 # Alias to prevent any AttributeError across routers
 class RequestActionUpdate(BaseModel):
     status: str
     actor_email: str
+    can_view: bool = True
+    can_download: bool = False
+    can_edit: bool = False

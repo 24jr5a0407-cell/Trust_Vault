@@ -199,15 +199,29 @@ def handle_request_approval(
     new_status = payload.status.upper()
     cursor.execute("UPDATE document_requests SET status = ? WHERE id = ?", (new_status, request_id))
     
+    can_view_val = 1 if payload.can_view else 0
+    can_download_val = 1 if payload.can_download else 0
+    can_edit_val = 1 if payload.can_edit else 0
+
     if new_status == "APPROVED":
         cursor.execute("SELECT * FROM document_access WHERE document_id = ? AND user_email = ?", (req["document_id"], req["user_email"]))
-        if not cursor.fetchone():
-            cursor.execute("INSERT INTO document_access (document_id, user_email) VALUES (?, ?)", (req["document_id"], req["user_email"]))
+        existing_acc = cursor.fetchone()
+        if not existing_acc:
+            cursor.execute("""
+                INSERT INTO document_access (document_id, user_email, can_view, can_download, can_edit) 
+                VALUES (?, ?, ?, ?, ?)
+            """, (req["document_id"], req["user_email"], can_view_val, can_download_val, can_edit_val))
+        else:
+            cursor.execute("""
+                UPDATE document_access 
+                SET can_view = ?, can_download = ?, can_edit = ?
+                WHERE document_id = ? AND user_email = ?
+            """, (can_view_val, can_download_val, can_edit_val, req["document_id"], req["user_email"]))
     elif new_status in ["REJECTED", "REVOKED"]:
         cursor.execute("DELETE FROM document_access WHERE document_id = ? AND user_email = ?", (req["document_id"], req["user_email"]))
         
     db.commit()
-    logger.info(f"Request {request_id} updated to {new_status} by {effective_reviewer}")
+    logger.info(f"Request {request_id} updated to {new_status} (view={can_view_val}, download={can_download_val}, edit={can_edit_val}) by {effective_reviewer}")
     
     # Notify requesting user via email of permission grant or rejection
     try:
