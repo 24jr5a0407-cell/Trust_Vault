@@ -10,7 +10,25 @@ async function checkAdminAuthAndLoad() {
         alert("Access denied. Admin privileges required.");
         window.location.href = 'dashboard.html';
         return;
-    }
+    
+    // Real-Time Cross-Tab Synchronization (Without manual page refresh)
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            loadAdminDocuments();
+            loadIncomingRequests();
+            loadAdminRequests();
+        }
+    });
+
+    // Auto-poll every 12 seconds so admin tab updates automatically
+    setInterval(() => {
+        if (!document.hidden) {
+            loadAdminDocuments();
+            loadIncomingRequests();
+            loadAdminRequests();
+        }
+    }, 12000);
+}
     await Promise.allSettled([
         loadAdminRequests(),
         loadCompanyEmployeesRoster(),
@@ -90,7 +108,7 @@ async function loadAdminRequests() {
                     <td>${companyBadge}</td>
                     <td><span class="badge ${r.status.toLowerCase()}">${r.status}</span></td>
                     <td><span style="font-family: monospace; color: #4f46e5;">${codeDisplay}</span></td>
-                    <td>${new Date(r.created_at).toLocaleString()}</td>
+                    <td>${formatLocalDate(r.created_at)}</td>
                     <td>${actionHtml}</td>
                 </tr>
             `;
@@ -218,7 +236,7 @@ async function loadAdminUsers() {
                 <td>${u.id}</td>
                 <td><strong>${u.email}</strong></td>
                 <td>${u.is_admin ? '<span class="badge approved">Yes</span>' : '<span class="badge">No</span>'}</td>
-                <td>${new Date(u.created_at).toLocaleString()}</td>
+                <td>${formatLocalDate(u.created_at)}</td>
                 <td>
                     ${(u.email !== 'guardfilespace@gmail.com' && !u.is_admin) ? `<button onclick="removeUser('${u.email}')" class="danger" style="padding: 4px 8px; font-size: 0.8rem; width: auto !important;">Remove User</button>` : '<span style="color: var(--text-muted); font-size: 0.85rem;">Primary Admin</span>'}
                 </td>
@@ -263,7 +281,7 @@ function renderAdminDocsTable(docs) {
     tbody.innerHTML = docs.map(d => {
         let lastEditedHtml = `<span style="color: #94a3b8; font-size: 0.82rem;">Not edited</span>`;
         if (d.last_edited_by) {
-            const timeStr = d.last_edited_at ? new Date(d.last_edited_at).toLocaleString() : '';
+            const timeStr = d.last_edited_at ? formatLocalDate(d.last_edited_at) : '';
             lastEditedHtml = `
                 <div style="font-size: 0.8rem;">
                     <span style="font-weight: 600; color: #0284c7;">✏️ ${d.last_edited_by}</span>
@@ -277,7 +295,7 @@ function renderAdminDocsTable(docs) {
                 <td><strong>#${d.id}</strong></td>
                 <td>${d.filename}</td>
                 <td><strong>${d.owner_email}</strong></td>
-                <td>${new Date(d.created_at).toLocaleString()}</td>
+                <td>${formatLocalDate(d.created_at)}</td>
                 <td>${lastEditedHtml}</td>
                 <td>
                     <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
@@ -404,7 +422,7 @@ async function loadAdminLedger() {
                 <td>${l.filename} (ID: #${l.document_id})</td>
                 <td>${l.user_email}</td>
                 <td><span class="badge" style="background: #e2e8f0; color: #0f172a;">${l.action}</span></td>
-                <td>${new Date(l.timestamp).toLocaleString()}</td>
+                <td>${formatLocalDate(l.timestamp)}</td>
             </tr>
         `).join('');
     } catch (err) { console.error(err); }

@@ -11,7 +11,24 @@ async function checkAuthAndLoadDashboard() {
     if (!email) {
         window.location.href = 'index.html';
         return;
-    }
+    
+    // Real-Time Cross-Tab Synchronization (Without manual page refresh)
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            loadUserDocuments();
+            loadDashboardIncomingRequests();
+            loadMyRequests();
+        }
+    });
+
+    // Auto-poll every 12 seconds so tab automatically syncs when admin or user makes changes
+    setInterval(() => {
+        if (!document.hidden) {
+            loadUserDocuments();
+            loadDashboardIncomingRequests();
+        }
+    }, 12000);
+}
 
     const welcomeEl = document.getElementById('userWelcome');
     const adminNavBtn = document.getElementById('adminNavBtn');
@@ -85,7 +102,7 @@ function renderVaultTable(docs) {
 
         let lastEditedHtml = `<span style="color: #94a3b8; font-size: 0.82rem;">Not edited</span>`;
         if (doc.last_edited_by) {
-            const timeStr = doc.last_edited_at ? new Date(doc.last_edited_at).toLocaleString() : '';
+            const timeStr = doc.last_edited_at ? formatLocalDate(doc.last_edited_at) : '';
             lastEditedHtml = `
                 <div style="font-size: 0.8rem;">
                     <span style="font-weight: 600; color: #0284c7;">✏️ ${doc.last_edited_by}</span>
@@ -103,7 +120,7 @@ function renderVaultTable(docs) {
                 <td>${doc.filename}</td>
                 <td>${doc.owner_email}</td>
                 <td>${roleBadge}</td>
-                <td>${new Date(doc.created_at).toLocaleString()}</td>
+                <td>${formatLocalDate(doc.created_at)}</td>
                 <td>${lastEditedHtml}</td>
                 <td>
                     <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
@@ -342,7 +359,7 @@ async function loadMyRequests() {
                 <td>${r.filename} (ID: #${r.document_id})</td>
                 <td>${r.owner_email}</td>
                 <td><span class="badge ${r.status.toLowerCase()}">${r.status}</span></td>
-                <td>${new Date(r.created_at).toLocaleString()}</td>
+                <td>${formatLocalDate(r.created_at)}</td>
             </tr>
         `).join('');
     } catch (err) { console.error(err); }
@@ -435,7 +452,7 @@ async function loadDashboardIncomingRequests() {
                     <td>${r.filename} (ID: #${r.document_id})</td>
                     <td><strong>${r.user_email}</strong></td>
                     <td><span class="badge ${r.status.toLowerCase()}">${r.status}</span></td>
-                    <td>${new Date(r.created_at).toLocaleString()}</td>
+                    <td>${formatLocalDate(r.created_at)}</td>
                     <td>${permDropdown}</td>
                 </tr>
             `;
@@ -558,7 +575,7 @@ function renderPersonalTable(docs) {
         <tr>
             <td><strong>#${doc.id}</strong></td>
             <td>${doc.filename}</td>
-            <td>${new Date(doc.created_at).toLocaleString()}</td>
+            <td>${formatLocalDate(doc.created_at)}</td>
             <td>
                 <button onclick="viewDoc(${doc.id})" class="btn-secondary" style="padding: 4px 8px; width: auto !important;">View</button>
                 <button onclick="deletePersonalDocument(${doc.id})" class="danger" style="padding: 4px 8px; width: auto !important;">Delete</button>

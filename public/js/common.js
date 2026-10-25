@@ -107,3 +107,34 @@ function confirmLogout() {
 function logout() {
     confirmLogout();
 }
+
+
+/**
+ * Formats ISO or UTC timestamps accurately into the user's local timezone.
+ * Appends 'Z' to UTC SQLite strings like 'YYYY-MM-DD HH:MM:SS' if missing.
+ */
+function formatLocalDate(dateStr) {
+    if (!dateStr) return '—';
+    try {
+        let clean = String(dateStr).trim();
+        // If string lacks timezone indicator ('Z' or offset), treat SQLite default as UTC
+        if (!clean.includes('Z') && !clean.includes('+') && !clean.includes('T')) {
+            clean = clean.replace(' ', 'T') + 'Z';
+        } else if (clean.includes('T') && !clean.endsWith('Z') && !clean.includes('+')) {
+            clean += 'Z';
+        }
+        const d = new Date(clean);
+        if (isNaN(d.getTime())) return dateStr;
+        return d.toLocaleString(undefined, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        });
+    } catch (e) {
+        return dateStr;
+    }
+}
