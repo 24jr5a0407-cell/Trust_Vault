@@ -10,6 +10,8 @@ from b2_storage import upload_file_to_b2, get_file_from_b2, delete_file_from_b2
 from security import get_current_user
 from logger import logger
 from file_validator import validate_file_upload
+from config import ADMIN_EMAIL
+from email_service import send_email
 
 router = APIRouter(prefix="/api/documents", tags=["Document Management"])
 
@@ -100,7 +102,7 @@ def get_user_documents(
         SELECT DISTINCT d.id, d.filename, d.owner_email, d.created_at,
                COALESCE(da.can_view, 1) as can_view,
                COALESCE(da.can_download, 0) as can_download,
-               COALESCE(da.can_edit, 0) as can_edit
+               COALESCE(da.can_edit, 0) as can_edit, d.last_edited_by, d.last_edited_at
         FROM documents d
         LEFT JOIN document_access da ON d.id = da.document_id AND da.user_email = ?
         WHERE d.is_personal = 0 AND (d.owner_email = ? OR da.user_email = ?)
@@ -281,11 +283,140 @@ def edit_document(
         logger.warning(f"Edit permission denied for user '{effective_email}' on doc {document_id}")
         raise HTTPException(status_code=403, detail="Permission denied. You do not have edit permissions for this document.")
         
-    cursor.execute("UPDATE documents SET filename = ? WHERE id = ?", (payload.filename, document_id))
+    cursor.execute(
+        "UPDATE documents SET filename = ?, last_edited_by = ?, last_edited_at = CURRENT_TIMESTAMP WHERE id = ?", 
+        (payload.filename, effective_email, document_id)
+    )
     cursor.execute("INSERT INTO document_logs (document_id, user_email, action) VALUES (?, ?, ?)", (document_id, effective_email, f"RENAMED_TO_{payload.filename}"))
     db.commit()
-    logger.info(f"Document {document_id} renamed successfully to '{payload.filename}'")
+    logger.info(f"Document {document_id} renamed successfully to '{payload.filename}' by '{effective_email}'")
+
+    # If edited by a user other than the primary admin, notify admin with audit alert
+    if effective_email and effective_email.lower() != ADMIN_EMAIL.lower():
+        try:
+            subject = f"[Trust Vault Document Alert] Document #{document_id} Renamed by {effective_email}"
+            html_content = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 550px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <h3 style="color: #0284c7; margin-bottom: 8px;">✏️ Document Renamed by User</h3>
+                <p>User <strong>{effective_email}</strong> has renamed Document #{document_id}:</p>
+                <div style="background: #f8fafc; padding: 12px; border-left: 4px solid #0284c7; margin: 15px 0;">
+                    <p style="margin: 4px 0;"><strong>Previous Name:</strong> {doc['filename']}</p>
+                    <p style="margin: 4px 0;"><strong>New Name:</strong> {payload.filename}</p>
+                    <p style="margin: 4px 0;"><strong>Document Owner:</strong> {doc['owner_email']}</p>
+                    <p style="margin: 4px 0;"><strong>Editor:</strong> {effective_email}</p>
+                </div>
+            </div>
+            """
+            send_email(ADMIN_EMAIL, subject, html_content, f"Document #{document_id} renamed to '{payload.filename}' by {effective_email}.")
+        except Exception as mail_err:
+            logger.warning(f"Failed to send admin edit notification: {mail_err}")
+
     return {"message": "Document updated successfully.", "new_filename": payload.filename}
+
+
+@router.put("/{document_id}/content")
+def save_document_content(
+    document_id: int,
+    file: UploadFile = File(...),
+    user_email: str = Form(None),
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """
+    Saves in-app edits directly into the document file in storage.
+    Only Owner, Admin, or granted users with Edit permissions can perform this action.
+    Updates last_edited_by & last_edited_at and records action in audit ledger.
+    """
+    effective_email = current_user["email"] if current_user else user_email
+    is_admin = bool(current_user.get("is_admin", False))
+    logger.info(f"User '{effective_email}' saving edited content for document ID {document_id}")
+    cursor = db.cursor()
+
+    cursor.execute("SELECT * FROM documents WHERE id = ?", (document_id,))
+    doc = cursor.fetchone()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found.")
+
+    if not is_admin:
+        cursor.execute("SELECT is_admin FROM users WHERE email = ?", (effective_email,))
+        user_row = cursor.fetchone()
+        is_admin = bool(user_row["is_admin"]) if user_row else False
+
+    is_owner = (doc["owner_email"] == effective_email)
+    can_edit = is_admin or is_owner
+    if not can_edit:
+        cursor.execute("SELECT can_edit FROM document_access WHERE document_id = ? AND user_email = ?", (document_id, effective_email))
+        acc_row = cursor.fetchone()
+        if acc_row and acc_row["can_edit"]:
+            can_edit = True
+
+    if not can_edit:
+        logger.warning(f"In-app edit content denied for '{effective_email}' on doc {document_id}")
+        raise HTTPException(status_code=403, detail="Permission denied. You do not have edit permissions for this document.")
+
+    # Validate uploaded content
+    clean_filename, file_content = validate_file_upload(file)
+
+    # 1. Update local storage if local file exists
+    if os.path.exists(doc["file_path"]):
+        try:
+            with open(doc["file_path"], "wb") as f_out:
+                f_out.write(file_content)
+        except Exception as local_err:
+            logger.warning(f"Local file write warning during edit save: {local_err}")
+
+    # 2. Upload / overwrite in Backblaze B2 cloud storage
+    try:
+        is_personal = bool(dict(doc).get("is_personal", 0))
+        memory_buffer = io.BytesIO(file_content)
+        memory_buffer.seek(0)
+        upload_file_to_b2(
+            memory_buffer, 
+            doc["stored_filename"], 
+            is_personal=is_personal, 
+            user_email=doc["owner_email"]
+        )
+    except Exception as b2_err:
+        logger.error(f"Backblaze B2 overwrite warning on edit save: {b2_err}")
+
+    # 3. Update database audit columns
+    cursor.execute(
+        "UPDATE documents SET last_edited_by = ?, last_edited_at = CURRENT_TIMESTAMP WHERE id = ?",
+        (effective_email, document_id)
+    )
+    cursor.execute(
+        "INSERT INTO document_logs (document_id, user_email, action) VALUES (?, ?, ?)",
+        (document_id, effective_email, f"EDITED_DOCUMENT_CONTENT")
+    )
+    db.commit()
+    logger.info(f"Document #{document_id} content successfully updated by '{effective_email}'")
+
+    # 4. Notify Administrator if edited by a user
+    if effective_email and effective_email.lower() != ADMIN_EMAIL.lower():
+        try:
+            subject = f"[Trust Vault Document Alert] Document #{document_id} ({doc['filename']}) Edited by {effective_email}"
+            html_content = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 550px; margin: auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <h3 style="color: #0284c7; margin-bottom: 8px;">✏️ In-App Document Edit Completed</h3>
+                <p>User <strong>{effective_email}</strong> has edited the contents of Document #{document_id}:</p>
+                <div style="background: #f8fafc; padding: 12px; border-left: 4px solid #0284c7; margin: 15px 0;">
+                    <p style="margin: 4px 0;"><strong>Document ID:</strong> #{document_id}</p>
+                    <p style="margin: 4px 0;"><strong>Filename:</strong> {doc['filename']}</p>
+                    <p style="margin: 4px 0;"><strong>Document Owner:</strong> {doc['owner_email']}</p>
+                    <p style="margin: 4px 0;"><strong>Edited By:</strong> <span style="color: #0284c7; font-weight: bold;">{effective_email}</span></p>
+                    <p style="margin: 4px 0;"><strong>Status:</strong> Saved to Vault Storage & Logged to Ledger</p>
+                </div>
+            </div>
+            """
+            send_email(ADMIN_EMAIL, subject, html_content, f"Document #{document_id} edited by {effective_email}.")
+        except Exception as mail_err:
+            logger.warning(f"Failed to send admin notification for content edit: {mail_err}")
+
+    return {
+        "message": "Document content successfully updated and saved.",
+        "document_id": document_id,
+        "last_edited_by": effective_email
+    }
 
 
 @router.delete("/{document_id}")

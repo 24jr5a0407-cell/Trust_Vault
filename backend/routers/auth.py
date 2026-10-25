@@ -6,6 +6,7 @@ from database import get_db
 from security import hash_password, verify_password, create_access_token
 from logger import logger
 from email_service import send_email
+from config import ADMIN_EMAIL
 
 router = APIRouter(prefix="/api", tags=["User Authentication"])
 
@@ -19,7 +20,7 @@ def generate_otp() -> str:
 
 @router.post("/request-access")
 def request_access(request: schemas.AccessRequestCreate, db = Depends(get_db)):
-    """User submits email to request entry into the whitelist."""
+    """User submits email to request entry into the whitelist and notifies the administrator."""
     logger.info(f"Incoming access whitelist request for email: {request.email}")
     cursor = db.cursor()
     cursor.execute("SELECT * FROM allowed_users WHERE email = ?", (request.email,))
@@ -29,10 +30,43 @@ def request_access(request: schemas.AccessRequestCreate, db = Depends(get_db)):
         logger.info(f"Access request for {request.email} already exists with status: {existing['status']}")
         return {"message": f"Access request for {request.email} is already {existing['status']}."}
     
-    cursor.execute("INSERT INTO allowed_users (email, status) VALUES (?, 'PENDING')", (request.email,))
+    cursor.execute(
+        "INSERT INTO allowed_users (email, status, full_name, phone, department) VALUES (?, 'PENDING', ?, ?, ?)", 
+        (request.email, request.full_name or '', request.phone or '', request.department or '')
+    )
     db.commit()
     logger.info(f"Access request submitted and set to PENDING for: {request.email}")
-    return {"message": "Access request submitted successfully. Please wait for admin approval."}
+
+    # Dispatch immediate email alert to system admin with candidate's entered credentials
+    try:
+        subject = f"[Trust Vault Whitelist Alert] New Access Request Submitted - {request.email}"
+        details_html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 550px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 10px; background-color: #ffffff;">
+            <h2 style="color: #0284c7; margin-bottom: 6px; font-size: 1.25rem;">👤 New User Awaiting Administrator Approval</h2>
+            <p style="color: #475569; font-size: 0.95rem; margin-bottom: 16px;">A new user has submitted a registration request on Trust Vault and is waiting for authorization:</p>
+            <div style="background: #f8fafc; border-left: 4px solid #0284c7; padding: 14px 18px; border-radius: 6px; margin: 16px 0;">
+                <p style="margin: 4px 0;"><strong>User Email:</strong> <span style="color: #0f172a;">{request.email}</span></p>
+                <p style="margin: 4px 0;"><strong>Full Name:</strong> <span style="color: #0f172a;">{request.full_name or 'Not specified'}</span></p>
+                <p style="margin: 4px 0;"><strong>Phone Number:</strong> <span style="color: #0f172a;">{request.phone or 'Not specified'}</span></p>
+                <p style="margin: 4px 0;"><strong>Department / Role:</strong> <span style="color: #0f172a;">{request.department or 'Not specified'}</span></p>
+                <p style="margin: 4px 0;"><strong>Submission Status:</strong> <span style="color: #d97706; font-weight: bold;">PENDING REVIEW</span></p>
+            </div>
+            <p style="color: #64748b; font-size: 0.88rem; line-height: 1.5;">
+                Please log in to your <a href="https://trust-vault.onrender.com/admin.html" style="color: #0284c7; font-weight: bold;">Admin Control Panel</a> to verify their company roster match and approve or revoke their access.
+            </p>
+        </div>
+        """
+        send_email(
+            to_email=ADMIN_EMAIL,
+            subject=subject,
+            html_content=details_html,
+            text_content=f"New access request awaiting approval: {request.email} (Name: {request.full_name}, Phone: {request.phone}, Department: {request.department})"
+        )
+        logger.info(f"Admin notification email dispatched successfully to {ADMIN_EMAIL} for {request.email}")
+    except Exception as mail_err:
+        logger.warning(f"Could not send admin notification email: {mail_err}")
+
+    return {"message": "Access request submitted successfully. Administrator notified. Please wait for approval."}
 
 
 @router.post("/register")

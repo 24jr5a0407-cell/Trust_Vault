@@ -8,6 +8,7 @@
     <link rel="apple-touch-icon" href="logo-icon.png">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 </head>
 <body onload="checkAdminAuthAndLoad()">
     <div class="container" style="max-width: 1200px;">
@@ -61,7 +62,7 @@
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Email</th>
+                            <th>Candidate Details</th>
                             <th>Company Status</th>
                             <th>Status</th>
                             <th>Secure Code Status</th>
@@ -114,6 +115,7 @@
                             <th>Filename</th>
                             <th>Owner</th>
                             <th>Created At</th>
+                            <th>Last Edited By</th>
                             <th>Administrative Actions</th>
                         </tr>
                     </thead>
@@ -211,18 +213,50 @@
         </div>
     </div>
 
-    <!-- DOCUMENT PREVIEW MODAL -->
-    <div id="previewModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; padding: 12px;">
-        <div style="background: white; width: 100%; max-width: 950px; height: 90vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; padding: 16px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
-                <h3 id="previewTitle" style="margin: 0; font-size: 1.1rem;">Document Preview (Read-Only)</h3>
-                <div style="display: flex; gap: 8px;">
+    <!-- DOCUMENT PREVIEW & IN-APP EDITOR MODAL -->
+    <div id="previewModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); z-index: 1000; justify-content: center; align-items: center; padding: 12px;">
+        <div style="background: white; width: 100%; max-width: 1050px; height: 92vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                <h3 id="previewTitle" style="margin: 0; font-size: 1.1rem; color: #0f172a;">Document Preview</h3>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button id="btnToggleEditor" onclick="toggleInAppEditor()" class="btn-secondary" style="display: none; padding: 6px 12px; font-size: 0.85rem; color: #d97706 !important; border-color: #fde68a !important; background: #fffbeb !important; font-weight: 600;">✏️ Edit Document</button>
                     <button onclick="showDownloadDisabledWarning()" class="btn-secondary" style="padding: 6px 12px; font-size: 0.85rem; background: #475569;">⬇️ Download</button>
                     <button onclick="closePreview()" class="danger" style="padding: 6px 12px; font-size: 0.85rem;">✕ Close</button>
                 </div>
             </div>
 
-            <div id="pdfViewerContainer" style="flex: 1; overflow-y: auto; background: #334155; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 15px; user-select: none;" oncontextmenu="return false;">
+            <!-- IN-APP LIVE EDITOR TOOLBAR -->
+            <div id="viewerEditorToolbar" style="display: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                <!-- PDF Editor Controls -->
+                <div id="editorPdfTools" style="display: none; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <label style="font-size: 0.82rem; font-weight: 600; color: #334155;">PDF Annotation / Header:</label>
+                    <input type="text" id="pdfAnnotationInput" placeholder="e.g. APPROVED & REVIEWED BY COMPLIANCE" style="padding: 5px 10px; font-size: 0.82rem; width: 280px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                    <label style="display: flex; align-items: center; gap: 5px; font-size: 0.82rem; color: #334155; cursor: pointer;">
+                        <input type="checkbox" id="pdfStampCheckbox" checked> Add Official Vault Stamp
+                    </label>
+                </div>
+
+                <!-- Image Editor Controls -->
+                <div id="editorImageTools" style="display: none; gap: 8px; align-items: center; flex-wrap: wrap;">
+                    <label style="font-size: 0.82rem; font-weight: 600; color: #334155;">Image Filter:</label>
+                    <button onclick="applyImageFilter('none')" class="btn-secondary" style="padding: 4px 8px; font-size: 0.78rem;">Normal</button>
+                    <button onclick="applyImageFilter('grayscale')" class="btn-secondary" style="padding: 4px 8px; font-size: 0.78rem;">B&W</button>
+                    <button onclick="applyImageFilter('contrast')" class="btn-secondary" style="padding: 4px 8px; font-size: 0.78rem;">High Contrast</button>
+                    <input type="text" id="imageWatermarkInput" placeholder="Watermark text..." style="padding: 4px 8px; font-size: 0.8rem; width: 140px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                </div>
+
+                <!-- Text Editor Controls -->
+                <div id="editorTextTools" style="display: none; gap: 8px; align-items: center;">
+                    <span style="font-size: 0.82rem; color: #475569; font-weight: 600;">Text Mode: Real-time inline editing enabled</span>
+                </div>
+
+                <!-- Save Action -->
+                <div>
+                    <button id="btnSaveDocumentEdits" onclick="saveInAppDocumentEdits()" style="background: #16a34a; color: white; padding: 6px 14px; font-size: 0.85rem; font-weight: 600; border-radius: 6px; cursor: pointer; border: none;">💾 Save & Apply to Vault</button>
+                </div>
+            </div>
+
+            <div id="pdfViewerContainer" style="flex: 1; overflow-y: auto; background: #1e293b; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 15px; user-select: none;" oncontextmenu="return false;">
                 <p style="color: white; margin-top: 50px;">Loading secure document...</p>
             </div>
         </div>

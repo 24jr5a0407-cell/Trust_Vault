@@ -2,6 +2,9 @@ from pydantic import BaseModel, EmailStr
 
 class AccessRequestCreate(BaseModel):
     email: EmailStr
+    full_name: str = None
+    phone: str = None
+    department: str = None
 
 class AdminActionRequest(BaseModel):
     email: EmailStr

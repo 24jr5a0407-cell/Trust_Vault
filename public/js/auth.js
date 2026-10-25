@@ -140,15 +140,29 @@ async function handleRegister() {
     }
 }
 
-// --- REQUEST ACCESS (SUBMIT EMAIL FOR WHITELISTING) ---
+// --- REQUEST ACCESS (SUBMIT CREDENTIALS FOR WHITELISTING & NOTIFY ADMIN) ---
 async function handleRequestAccess() {
-    const email = document.getElementById('reqEmail').value.trim();
+    const email = document.getElementById('reqEmail')?.value.trim();
+    const full_name = document.getElementById('reqFullName')?.value.trim() || '';
+    const phone = document.getElementById('reqPhone')?.value.trim() || '';
+    const department = document.getElementById('reqDepartment')?.value.trim() || '';
+
+    if (!email) {
+        showAlert("Please enter your corporate or work email address.", "error");
+        return;
+    }
+
+    const btn = document.getElementById('btnSubmitAccessRequest');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "⏳ Submitting & Dispatching Alert to Admin...";
+    }
 
     try {
         const res = await authFetch(`${API_BASE}/request-access`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
+            body: JSON.stringify({ email, full_name, phone, department })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || "Request failed");
@@ -156,6 +170,11 @@ async function handleRequestAccess() {
         showAlert(data.message, 'success');
     } catch (err) {
         showAlert(err.message, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "Submit Request & Notify Admin";
+        }
     }
 }
 

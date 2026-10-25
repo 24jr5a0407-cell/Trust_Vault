@@ -631,12 +631,24 @@
             <!-- 3. REQUEST ACCESS FORM -->
             <div id="formRequest" style="display: none;">
                 <h3 style="font-size: 1.1rem; margin-bottom: 6px;">Request Whitelist Entry</h3>
-                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 18px;">New users must submit their email for administrator authorization. Upon approval, your registration security code will be sent to your email.</p>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 18px;">Submit your credentials for administrator authorization. An immediate alert will be dispatched to the administrator with your details while your account is waiting for review.</p>
                 <div class="form-group">
-                    <label>Your Email Address</label>
-                    <input type="email" id="reqEmail" placeholder="name@company.com">
+                    <label>Corporate / Work Email Address *</label>
+                    <input type="email" id="reqEmail" placeholder="name@company.com" required>
                 </div>
-                <button onclick="handleRequestAccess()" style="width: 100%; height: 44px;">Submit Access Request</button>
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="reqFullName" placeholder="e.g. John Doe">
+                </div>
+                <div class="form-group">
+                    <label>Mobile / Phone Number</label>
+                    <input type="tel" id="reqPhone" placeholder="+1 (555) 000-0000">
+                </div>
+                <div class="form-group">
+                    <label>Department / Position</label>
+                    <input type="text" id="reqDepartment" placeholder="e.g. Engineering / Security / Operations">
+                </div>
+                <button id="btnSubmitAccessRequest" onclick="handleRequestAccess()" style="width: 100%; height: 44px;">Submit Request & Notify Admin</button>
             </div>
 
             <!-- 4. FORGOT PASSWORD WITH 5-MIN OTP -->

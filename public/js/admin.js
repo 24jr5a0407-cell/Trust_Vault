@@ -70,10 +70,23 @@ async function loadAdminRequests() {
 
             const codeDisplay = r.secure_code_masked || (r.email === 'guardfilespace@gmail.com' ? 'ADMIN-MASTER-KEY' : 'Sent via Email');
 
+            const candidateName = r.submitted_full_name || r.company_employee_name || '—';
+            const candidatePhone = r.submitted_phone ? `<span style="font-size: 0.78rem; color: #64748b; display: block;">📞 ${r.submitted_phone}</span>` : '';
+            const candidateDept = r.submitted_department ? `<span style="font-size: 0.78rem; color: #0284c7; display: block;">💼 ${r.submitted_department}</span>` : '';
+
+            const candidateDetails = `
+                <div>
+                    <strong>${r.email}</strong>
+                    <div style="font-size: 0.8rem; color: #334155; margin-top: 2px;">👤 ${candidateName}</div>
+                    ${candidatePhone}
+                    ${candidateDept}
+                </div>
+            `;
+
             return `
                 <tr>
                     <td>${r.id}</td>
-                    <td><strong>${r.email}</strong></td>
+                    <td>${candidateDetails}</td>
                     <td>${companyBadge}</td>
                     <td><span class="badge ${r.status.toLowerCase()}">${r.status}</span></td>
                     <td><span style="font-family: monospace; color: #4f46e5;">${codeDisplay}</span></td>
@@ -247,22 +260,36 @@ function renderAdminDocsTable(docs) {
         tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No documents found.</td></tr>`;
         return;
     }
-    tbody.innerHTML = docs.map(d => `
-        <tr>
-            <td><strong>#${d.id}</strong></td>
-            <td>${d.filename}</td>
-            <td><strong>${d.owner_email}</strong></td>
-            <td>${new Date(d.created_at).toLocaleString()}</td>
-            <td>
-                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-                    <button onclick="viewDoc(${d.id})" class="btn-secondary" style="padding: 4px 10px; font-size: 0.8rem; width: auto !important;">👁️ View</button>
-                    <button onclick="adminDownloadDoc(${d.id})" class="btn-secondary" style="padding: 4px 10px; font-size: 0.8rem; width: auto !important; color: #0284c7 !important; border-color: #bae6fd !important;">⬇️ Download</button>
-                    <button onclick="adminEditDoc(${d.id}, '${d.filename.replace(/'/g, "\\'")}')" class="btn-secondary" style="padding: 4px 10px; font-size: 0.8rem; width: auto !important; color: #d97706 !important; border-color: #fde68a !important;">✏️ Edit</button>
-                    <button onclick="adminDeleteDoc(${d.id}, '${d.filename.replace(/'/g, "\\'")}')" class="danger" style="padding: 4px 10px; font-size: 0.8rem; width: auto !important;">🗑️ Delete</button>
+    tbody.innerHTML = docs.map(d => {
+        let lastEditedHtml = `<span style="color: #94a3b8; font-size: 0.82rem;">Not edited</span>`;
+        if (d.last_edited_by) {
+            const timeStr = d.last_edited_at ? new Date(d.last_edited_at).toLocaleString() : '';
+            lastEditedHtml = `
+                <div style="font-size: 0.8rem;">
+                    <span style="font-weight: 600; color: #0284c7;">✏️ ${d.last_edited_by}</span>
+                    <span style="display: block; color: #64748b; font-size: 0.75rem;">${timeStr}</span>
                 </div>
-            </td>
-        </tr>
-    `).join('');
+            `;
+        }
+
+        return `
+            <tr>
+                <td><strong>#${d.id}</strong></td>
+                <td>${d.filename}</td>
+                <td><strong>${d.owner_email}</strong></td>
+                <td>${new Date(d.created_at).toLocaleString()}</td>
+                <td>${lastEditedHtml}</td>
+                <td>
+                    <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                        <button onclick="viewDoc(${d.id}, true)" class="btn-secondary" style="padding: 4px 10px; font-size: 0.8rem; width: auto !important;">👁️ View & Edit</button>
+                        <button onclick="adminDownloadDoc(${d.id})" class="btn-secondary" style="padding: 4px 10px; font-size: 0.8rem; width: auto !important; color: #0284c7 !important; border-color: #bae6fd !important;">⬇️ Download</button>
+                        <button onclick="adminEditDoc(${d.id}, '${d.filename.replace(/'/g, "\\'")}')" class="btn-secondary" style="padding: 4px 10px; font-size: 0.8rem; width: auto !important; color: #d97706 !important; border-color: #fde68a !important;">🏷️ Rename</button>
+                        <button onclick="adminDeleteDoc(${d.id}, '${d.filename.replace(/'/g, "\\'")}')" class="danger" style="padding: 4px 10px; font-size: 0.8rem; width: auto !important;">🗑️ Delete</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
 function adminDownloadDoc(id) {

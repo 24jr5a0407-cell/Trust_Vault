@@ -83,6 +83,20 @@ function renderVaultTable(docs) {
             downloadBtn = `<button onclick="showDownloadDisabledWarning()" class="btn-download-vault" style="padding: 6px 12px; font-size: 0.82rem; width: auto !important;">🔒 Download Blocked</button>`;
         }
 
+        let lastEditedHtml = `<span style="color: #94a3b8; font-size: 0.82rem;">Not edited</span>`;
+        if (doc.last_edited_by) {
+            const timeStr = doc.last_edited_at ? new Date(doc.last_edited_at).toLocaleString() : '';
+            lastEditedHtml = `
+                <div style="font-size: 0.8rem;">
+                    <span style="font-weight: 600; color: #0284c7;">✏️ ${doc.last_edited_by}</span>
+                    <span style="display: block; color: #64748b; font-size: 0.74rem;">${timeStr}</span>
+                </div>
+            `;
+        }
+
+        const canEditFlag = Boolean(isOwner || doc.can_edit === 1 || doc.can_edit === true);
+        const viewBtnText = canEditFlag ? '👁️ View & Edit' : '👁️ View';
+
         return `
             <tr>
                 <td><strong>#${doc.id}</strong></td>
@@ -90,9 +104,12 @@ function renderVaultTable(docs) {
                 <td>${doc.owner_email}</td>
                 <td>${roleBadge}</td>
                 <td>${new Date(doc.created_at).toLocaleString()}</td>
+                <td>${lastEditedHtml}</td>
                 <td>
-                    <button onclick="viewDoc(${doc.id})" class="btn-secondary" style="padding: 6px 12px; font-size: 0.82rem; width: auto !important;">👁️ View</button>
-                    ${downloadBtn}
+                    <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                        <button onclick="viewDoc(${doc.id}, ${canEditFlag})" class="btn-secondary" style="padding: 6px 12px; font-size: 0.82rem; width: auto !important;">${viewBtnText}</button>
+                        ${downloadBtn}
+                    </div>
                 </td>
             </tr>
         `;

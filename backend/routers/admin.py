@@ -28,6 +28,9 @@ def get_all_requests(
             au.status, 
             au.secure_code, 
             au.created_at,
+            au.full_name AS submitted_full_name,
+            au.phone AS submitted_phone,
+            au.department AS submitted_department,
             ce.full_name AS company_employee_name,
             ce.department AS company_department,
             CASE WHEN ce.id IS NOT NULL THEN 1 ELSE 0 END AS is_company_employee
@@ -299,7 +302,7 @@ def admin_get_all_documents(
     """Admin views all official documents in the system with file-manager style search."""
     logger.info(f"Admin '{current_admin['email']}' fetching all documents (search={search}).")
     cursor = db.cursor()
-    query = "SELECT * FROM documents WHERE is_personal = 0"
+    query = "SELECT id, filename, stored_filename, file_path, owner_email, is_personal, created_at, last_edited_by, last_edited_at FROM documents WHERE is_personal = 0"
     params = []
     if search:
         term = search.strip()

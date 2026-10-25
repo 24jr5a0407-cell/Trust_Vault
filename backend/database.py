@@ -179,6 +179,8 @@ def init_db(override_conn=None):
             file_path TEXT NOT NULL,
             owner_email TEXT NOT NULL,
             is_personal INTEGER DEFAULT 0,
+            last_edited_by TEXT,
+            last_edited_at TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     """)
@@ -200,6 +202,20 @@ def init_db(override_conn=None):
     for perm_col in [("can_view", "INTEGER DEFAULT 1"), ("can_download", "INTEGER DEFAULT 0"), ("can_edit", "INTEGER DEFAULT 0")]:
         try:
             cursor.execute(f"ALTER TABLE document_access ADD COLUMN {perm_col[0]} {perm_col[1]};")
+        except Exception:
+            pass
+
+    # Column Migrations for documents table (audit edits)
+    for col, col_type in [("last_edited_by", "TEXT"), ("last_edited_at", "TIMESTAMP")]:
+        try:
+            cursor.execute(f"ALTER TABLE documents ADD COLUMN {col} {col_type};")
+        except Exception:
+            pass
+
+    # Column Migrations for allowed_users table (registration request credentials)
+    for col, col_type in [("full_name", "TEXT"), ("phone", "TEXT"), ("department", "TEXT")]:
+        try:
+            cursor.execute(f"ALTER TABLE allowed_users ADD COLUMN {col} {col_type};")
         except Exception:
             pass
 
