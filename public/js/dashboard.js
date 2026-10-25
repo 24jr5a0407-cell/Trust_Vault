@@ -478,8 +478,6 @@ async function applyPermissionsDash(reqId, status) {
         showAlert(err.message, 'error');
     }
 }
-    } catch (err) { console.error(err); }
-}
 
 async function manageRequest(requestId, status) {
     const email = localStorage.getItem('user_email');
