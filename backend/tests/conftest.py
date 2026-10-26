@@ -19,11 +19,20 @@ TEST_DB_PATH = backend_dir / "test_trustvault.db"
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_environment(monkeypatch_session=None):
-    """Initializes test environment and mocks cloud storage."""
+    """Initializes test environment and mocks cloud storage and external email dispatch."""
     # Mock B2 storage operations to avoid external cloud network calls during unit testing
     import b2_storage
     b2_storage.upload_file_to_b2 = lambda file_obj, filename, is_personal=False, user_email="": f"mock/{filename}"
     b2_storage.delete_file_from_b2 = lambda storage_key: None
+
+    # Mock external email delivery so test dummy emails (e.g. alice@trustvault.com) never dispatch to real SMTP servers
+    import email_service
+    email_service.send_email = lambda to_email, subject, html_content, text_content=None: {
+        "success": True,
+        "recipient": to_email,
+        "subject": subject,
+        "note": "Mocked test delivery"
+    }
 
 
 @pytest.fixture(scope="function")
