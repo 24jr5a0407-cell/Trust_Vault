@@ -25,6 +25,18 @@ def send_email(to_email: str, subject: str, html_content: str, text_content: str
     2. Port 587 STARTTLS
     3. Resend HTTP REST API
     """
+    # Guard: Silently drop fake/dummy development or test domain emails so Gmail SMTP is never burdened with unreachable recipients
+    normalized_recipient = (to_email or "").strip().lower()
+    dummy_test_domains = ("@trustvault.com", "@example.com", "@test.com", "@dummy.com")
+    if any(normalized_recipient.endswith(d) for d in dummy_test_domains):
+        logger.info(f"Dummy test recipient '{to_email}' skipped from external SMTP delivery.")
+        return {
+            "success": True,
+            "recipient": to_email,
+            "subject": subject,
+            "note": "Skipped external delivery for test/dummy domain"
+        }
+
     success = False
     delivery_note = ""
 
